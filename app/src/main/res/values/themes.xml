@@ -1,10 +1,10 @@
 <resources>
 
-    <style name="Theme.RetroVault" parent="Theme.Material3.DayNight.NoActionBar" />
+    <style name="Theme.ShelfPalace" parent="Theme.Material3.DayNight.NoActionBar" />
 
     <style name="Theme.App.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">#0D0221</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
-        <item name="postSplashScreenTheme">@style/Theme.RetroVault</item>
+        <item name="postSplashScreenTheme">@style/Theme.ShelfPalace</item>
     </style>
 </resources>

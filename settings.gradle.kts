@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "RetroVault"
+rootProject.name = "ShelfPalace"
 include(":app")

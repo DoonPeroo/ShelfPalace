@@ -6,17 +6,17 @@ plugins {
 }
 
 android {
-    namespace = "com.example.retrovault"
+    namespace = "com.example.shelfpalace"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.example.retrovault"
+        applicationId = "com.example.shelfpalace"
         minSdk = 24
         targetSdk = 37
-        versionCode = 4
-        versionName = "ver. ALPHA 0.75"
+        versionCode = 7
+        versionName = "ver. ALPHA 0.80"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

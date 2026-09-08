@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">RetroVault</string>
+    <string name="app_name">ShelfPalace</string>
     <string name="action_home">HOME</string>
     <string name="action_back">BACK</string>
     <string name="action_save">SAVE</string>

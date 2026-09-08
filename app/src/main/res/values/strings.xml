@@ -1,0 +1,80 @@
+<resources>
+    <string name="app_name">RetroVault</string>
+    <string name="action_home">HOME</string>
+    <string name="action_back">BACK</string>
+    <string name="action_save">SAVE</string>
+    <string name="action_save_game">SAVE GAME</string>
+    <string name="action_cancel">CANCEL</string>
+    <string name="action_edit">EDIT</string>
+    <string name="action_delete">DELETE</string>
+    <string name="action_scan">SCAN</string>
+    <string name="action_search">SEARCH</string>
+    <string name="action_ok">OK</string>
+    <string name="action_select">SELECT</string>
+    <string name="action_capture">CAPTURE</string>
+    <string name="action_clear">CLEAR</string>
+    <string name="action_settings">SETTINGS</string>
+
+    <string name="label_title">Title</string>
+    <string name="label_release_date">Release Date</string>
+    <string name="label_genre">Genre</string>
+    <string name="label_developer">Developer</string>
+    <string name="label_description">Description</string>
+    <string name="label_cover_image_url">Cover URL</string>
+    <string name="label_preview">PREVIEW</string>
+
+    <string name="header_add_game">ADD NEW GAME</string>
+    <string name="header_edit_game">EDIT GAME</string>
+    <string name="header_scan_cover">SCAN COVER</string>
+    <string name="header_select_manufacturer">SELECT MANUFACTURER</string>
+    <string name="header_select_platform">(SELECT PLATFORM)</string>
+    <string name="header_game_details">GAME DETAILS</string>
+
+    <string name="msg_no_games">NO GAMES FOUND</string>
+    <string name="msg_no_results">NO RESULTS FOR \"%1$s\"</string>
+    <string name="msg_search_games">Search games...</string>
+    <string name="msg_search_all_games">Search all games...</string>
+    <string name="msg_type_to_search">TYPE TO SEARCH GAMES</string>
+    <string name="msg_camera_permission">Camera permission is required to scan games.</string>
+    <string name="msg_grant_permission">Grant Permission</string>
+    <string name="msg_delete_confirmation_title">DELETE GAME?</string>
+    <string name="msg_delete_confirmation_text">Are you sure you want to delete this game from your library? This action cannot be undone.</string>
+
+    <string name="content_desc_select_date">Select Date</string>
+    <string name="content_desc_toggle_flash">Toggle Flash</string>
+    <string name="content_desc_scan_game">Scan Game</string>
+    <string name="content_desc_close_search">Close Search</string>
+    <string name="action_back_to_list">BACK TO LIST</string>
+    <string name="label_director">Director</string>
+    <string name="label_cast">Cast</string>
+    <string name="label_format">Format</string>
+
+    <string name="header_add_movie">ADD NEW MOVIE</string>
+    <string name="header_edit_movie">EDIT MOVIE</string>
+    <string name="header_select_format">SELECT FORMAT</string>
+    <string name="header_movie_details">MOVIE DETAILS</string>
+    <string name="header_movies">MOVIES</string>
+    <string name="header_music">MUSIC</string>
+    <string name="header_media">MEDIA</string>
+    <string name="header_games">GAMES</string>
+
+    <string name="header_add_music">ADD NEW MUSIC</string>
+    <string name="header_edit_music">EDIT MUSIC</string>
+    <string name="header_music_details">MUSIC DETAILS</string>
+    <string name="label_artist">Artist/Author</string>
+    <string name="label_label">Label</string>
+    <string name="msg_no_music">NO MUSIC FOUND</string>
+    <string name="action_save_music">SAVE MUSIC</string>
+    <string name="msg_delete_music_confirmation_title">DELETE MUSIC?</string>
+    <string name="msg_delete_music_confirmation_text">Are you sure you want to delete this music from your library? This action cannot be undone.</string>
+
+    <string name="action_save_movie">SAVE MOVIE</string>
+    <string name="msg_no_movies">NO MOVIES FOUND</string>
+    <string name="msg_delete_movie_confirmation_title">DELETE MOVIE?</string>
+    <string name="msg_delete_movie_confirmation_text">Are you sure you want to delete this movie from your library? This action cannot be undone.</string>
+
+    <string name="nav_library">Library</string>
+    <string name="nav_favorites">Favorites</string>
+    <string name="nav_statistics">Statistics</string>
+    <string name="nav_settings">Settings</string>
+</resources>

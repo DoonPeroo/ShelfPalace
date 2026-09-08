@@ -1,0 +1,5 @@
+- [x] Update color palette in `Color.kt`
+- [x] Refine `NeonComponents.kt` to match the screenshot aesthetics
+- [x] Reorganize `ManufacturerScreen.kt` layout
+- [x] Set `ManufacturerList` as the start destination in `MainApp.kt`
+- [x] Verify UI with Gradle build

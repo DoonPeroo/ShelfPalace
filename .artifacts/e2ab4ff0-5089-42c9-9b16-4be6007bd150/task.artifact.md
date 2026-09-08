@@ -1,0 +1,5 @@
+- [x] Implement image picker in `AddEditGameScreen`
+- [x] Add persistable URI permission handling
+- [x] Add visual cover art preview
+- [x] Verify image display in `GameListScreen` and `GameDetailScreen`
+- [x] Build and ensure no compilation errors

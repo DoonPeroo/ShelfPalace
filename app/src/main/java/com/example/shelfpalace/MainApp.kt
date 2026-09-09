@@ -834,7 +834,7 @@ fun MovieFormatSelectionDialog(
                     onClick = onDismiss,
                     modifier = Modifier.width(110.dp),
                     height = 32.dp,
-                    color = Color.White.copy(alpha = 0.85f),
+                    color = Color.White.copy(alpha = 0.6f),
                     containerColor = Color.White.copy(alpha = 0.08f)
                 )
             }
@@ -903,8 +903,8 @@ fun MusicFormatSelectionDialog(
                 NeonButton(
                     text = "CANCEL",
                     onClick = onDismiss,
-                    modifier = Modifier.width(108.dp),
-                    height = 31.dp,
+                    modifier = Modifier.width(110.dp),
+                    height = 32.dp,
                     color = Color.White.copy(alpha = 0.3f)
                 )
             }
@@ -998,8 +998,8 @@ fun PlatformSelectionDialog(
                 NeonButton(
                     text = "CANCEL",
                     onClick = onDismiss,
-                    modifier = Modifier.width(108.dp),
-                    height = 31.dp,
+                    modifier = Modifier.width(110.dp),
+                    height = 32.dp,
                     color = Color.White.copy(alpha = 0.3f)
                 )
             }
@@ -1019,7 +1019,7 @@ fun AddChoiceDialog(
             color = MaterialTheme.colorScheme.primary,
             containerAlpha = 0.9f,
             padding = 12.dp,
-            modifier = Modifier.width(267.dp)
+            modifier = Modifier.width(250.dp)
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -1037,7 +1037,7 @@ fun AddChoiceDialog(
                     text = "NEW GAME",
                     onClick = onAddGame,
                     modifier = Modifier.fillMaxWidth(),
-                    height = 42.dp,
+                    height = 41.dp,
                     color = Color.White.copy(alpha = 0.6f),
                     containerColor = Color.White.copy(alpha = 0.08f)
                 )
@@ -1046,7 +1046,7 @@ fun AddChoiceDialog(
                     text = "NEW MOVIE",
                     onClick = onAddMovie,
                     modifier = Modifier.fillMaxWidth(),
-                    height = 42.dp,
+                    height = 41.dp,
                     color = Color.White.copy(alpha = 0.6f),
                     containerColor = Color.White.copy(alpha = 0.08f)
                 )
@@ -1055,7 +1055,7 @@ fun AddChoiceDialog(
                     text = "NEW MUSIC",
                     onClick = onAddMusic,
                     modifier = Modifier.fillMaxWidth(),
-                    height = 42.dp,
+                    height = 41.dp,
                     color = Color.White.copy(alpha = 0.6f),
                     containerColor = Color.White.copy(alpha = 0.08f)
                 )
@@ -1065,8 +1065,7 @@ fun AddChoiceDialog(
                     onClick = onDismiss,
                     modifier = Modifier.width(110.dp),
                     height = 32.dp,
-                    color = Color.White.copy(alpha = 0.85f),
-                    containerColor = Color.White.copy(alpha = 0.08f)
+                    color = Color.White.copy(alpha = 0.3f)
                 )
             }
         }

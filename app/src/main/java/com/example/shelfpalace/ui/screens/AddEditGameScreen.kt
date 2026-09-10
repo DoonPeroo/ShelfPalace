@@ -362,14 +362,7 @@ fun AddEditGameScreen(
                 navigationIcon = {
                     NeonBackButton(onClick = onBack, modifier = Modifier.padding(start = 8.dp))
                 },
-                actions = {
-                    NeonIconButton(
-                        iconPainter = painterResource(id = R.drawable.ic_close),
-                        onClick = onHome,
-                        modifier = Modifier.padding(end = 8.dp),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                },
+                actions = {},
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         },

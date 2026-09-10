@@ -127,94 +127,86 @@ fun GameDetailScreen(
 
         Scaffold(
             topBar = {
-                CenterAlignedTopAppBar(
-                    title = {
-                        val headerCorners = 12.dp
-                        Box(
-                            modifier = Modifier
-                                .height(48.dp)
-                                .background(Color.Black.copy(alpha = 0.3f), getAppCorners(headerCorners))
-                                .border(1.dp, accentColor.copy(alpha = 0.8f), getAppCorners(headerCorners))
-                                .padding(horizontal = 12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    "GAME",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        letterSpacing = 1.sp,
-                                        fontSize = 8.sp,
-                                        color = accentColor.copy(alpha = 0.7f)
-                                    )
-                                )
-                                Text(
-                                    "DETAILS",
-                                    style = MaterialTheme.typography.titleSmall.copy(
-                                        fontWeight = FontWeight.Black,
-                                        letterSpacing = 1.sp,
-                                        fontSize = 14.sp,
-                                        color = accentColor
-                                    )
-                                )
-                            }
-                        }
-                    },
-                    navigationIcon = {
-                        NeonIconButton(
-                            iconPainter = painterResource(id = R.drawable.back),
-                            onClick = onBack,
-                            color = accentColor,
-                            size = 44.dp,
-                            modifier = Modifier.padding(start = 12.dp)
-                        )
-                    },
-                    actions = {
-                        Row(
-                            modifier = Modifier.padding(end = 12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Favorite
-                            NeonIconButton(
-                                iconPainter = androidx.compose.ui.res.painterResource(
-                                    id = if (game?.isFavorite == true) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
-                                ),
-                                onClick = { 
-                                    game?.let { currentGame ->
-                                        scope.launch { repository.toggleFavorite(currentGame.id) }
-                                    }
-                                },
-                                color = if (game?.isFavorite == true) Color(0xFFAD1457) else accentColor,
-                                tint = if (game?.isFavorite == true) Color(0xFFAD1457) else accentColor,
-                                size = 40.dp
-                            )
-
-                            // Edit
-                            NeonIconButton(
-                                iconPainter = painterResource(id = R.drawable.pencil),
-                                onClick = { game?.let { onEditGame(it.id) } },
-                                color = accentColor,
-                                size = 40.dp
-                            )
-
-                            // Delete
-                            NeonIconButton(
-                                iconPainter = painterResource(id = R.drawable.trash_can),
-                                onClick = { showDeleteConfirmation = true },
-                                color = accentColor,
-                                size = 40.dp
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent,
-                        scrolledContainerColor = Color.Transparent
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .height(56.dp)
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    NeonIconButton(
+                        iconPainter = painterResource(id = R.drawable.back),
+                        onClick = onBack,
+                        color = accentColor,
+                        size = 40.dp
                     )
-                )
+
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    val headerCorners = 12.dp
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(42.dp)
+                            .background(Color.Black.copy(alpha = 0.3f), getAppCorners(headerCorners))
+                            .border(1.dp, accentColor.copy(alpha = 0.8f), getAppCorners(headerCorners))
+                            .padding(horizontal = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "GAME DETAILS",
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 1.sp,
+                                fontSize = 13.sp,
+                                color = accentColor
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        // Favorite
+                        NeonIconButton(
+                            iconPainter = painterResource(
+                                id = if (game?.isFavorite == true) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
+                            ),
+                            onClick = { 
+                                game?.let { currentGame ->
+                                    scope.launch { repository.toggleFavorite(currentGame.id) }
+                                }
+                            },
+                            color = if (game?.isFavorite == true) Color(0xFFAD1457) else accentColor,
+                            tint = if (game?.isFavorite == true) Color(0xFFAD1457) else accentColor,
+                            size = 38.dp
+                        )
+
+                        // Edit
+                        NeonIconButton(
+                            iconPainter = painterResource(id = R.drawable.pencil),
+                            onClick = { game?.let { onEditGame(it.id) } },
+                            color = accentColor,
+                            size = 38.dp
+                        )
+
+                        // Delete
+                        NeonIconButton(
+                            iconPainter = painterResource(id = R.drawable.trash_can),
+                            onClick = { showDeleteConfirmation = true },
+                            color = accentColor,
+                            size = 38.dp
+                        )
+                    }
+                }
             },
             containerColor = Color.Transparent
         ) { padding ->

@@ -32,6 +32,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -92,17 +93,31 @@ fun MovieListScreen(
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { 
-                    if (isSearchActive) {
+            if (isSearchActive) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        NeonIconButton(
+                            iconPainter = painterResource(id = R.drawable.ic_close),
+                            onClick = { isSearchActive = false; searchQuery = "" },
+                            contentDescription = stringResource(R.string.content_desc_close_search),
+                            color = accentColor
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
+                                .weight(1f)
                                 .focusRequester(focusRequester),
-                            placeholder = { Text(stringResource(R.string.msg_search_games)) },
+                            placeholder = { Text("Search movies...") },
                             singleLine = true,
                             shape = getAppCorners(8.dp),
                             colors = synthwaveTextFieldColors(accentColor),
@@ -111,67 +126,73 @@ fun MovieListScreen(
                         LaunchedEffect(isSearchActive) {
                             if (isSearchActive) focusRequester.requestFocus()
                         }
-                    } else {
-                        val headerCorners = 12.dp
-                        Box(
-                            modifier = Modifier
-                                .height(48.dp)
-                                .background(Color.Black.copy(alpha = 0.3f), getAppCorners(headerCorners))
-                                .border(1.dp, accentColor.copy(alpha = 0.8f), getAppCorners(headerCorners))
-                                .padding(horizontal = 12.dp),
-                            contentAlignment = Alignment.Center
+                    }
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .height(56.dp)
+                        .padding(horizontal = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val headerCorners = 12.dp
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 60.dp)
+                            .height(44.dp)
+                            .background(Color.Black.copy(alpha = 0.3f), getAppCorners(headerCorners))
+                            .border(1.dp, accentColor.copy(alpha = 0.8f), getAppCorners(headerCorners))
+                            .padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
+                            if (formatId != "all") {
                                 Text(
-                                    "MOVIES",
+                                    text = "MOVIES",
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.Bold,
                                         letterSpacing = 1.sp,
                                         fontSize = 8.sp,
                                         color = accentColor.copy(alpha = 0.7f)
-                                    )
-                                )
-                                Text(
-                                    text = formatName.uppercase(),
-                                    style = MaterialTheme.typography.titleSmall.copy(
-                                        fontWeight = FontWeight.Black,
-                                        letterSpacing = 1.sp,
-                                        fontSize = 14.sp,
-                                        color = accentColor
-                                    )
+                                    ),
+                                    textAlign = TextAlign.Center
                                 )
                             }
+                            Text(
+                                text = formatName.uppercase(),
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.Black,
+                                    letterSpacing = 1.sp,
+                                    fontSize = 14.sp,
+                                    color = accentColor
+                                ),
+                                textAlign = TextAlign.Center
+                            )
                         }
                     }
-                },
-                navigationIcon = {
-                    if (isSearchActive) {
-                        NeonIconButton(
-                            iconPainter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_close),
-                            onClick = { isSearchActive = false; searchQuery = "" },
-                            contentDescription = stringResource(R.string.content_desc_close_search),
-                            color = accentColor,
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
-                    } else {
+
+                    Box(modifier = Modifier.align(Alignment.CenterStart)) {
                         NeonBackButton(
-                            onClick = onBack, 
-                            modifier = Modifier.padding(start = 8.dp),
+                            onClick = onBack,
                             color = accentColor
                         )
                     }
-                },
-                actions = {
-                    if (!isSearchActive) {
+
+                    Row(
+                        modifier = Modifier.align(Alignment.CenterEnd),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
                         SortIconButton(
                             currentSortOption = currentSortOption,
                             onSortOptionSelected = { scope.launch { settingsRepository.setSortOption(it) } },
                             color = accentColor
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
                         NeonIconButton(
                             iconPainter = painterResource(id = R.drawable.search),
                             onClick = { isSearchActive = true },
@@ -179,7 +200,6 @@ fun MovieListScreen(
                             color = accentColor,
                             tint = Color.Unspecified
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
                         NeonIconButton(
                             iconPainter = painterResource(id = R.drawable.camera),
                             onClick = onScanClick,
@@ -187,13 +207,9 @@ fun MovieListScreen(
                             color = accentColor,
                             tint = Color.Unspecified
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                )
-            )
+                }
+            }
         },
         containerColor = Color.Transparent
     ) { padding ->

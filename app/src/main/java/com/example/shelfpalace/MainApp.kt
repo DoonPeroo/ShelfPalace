@@ -5,6 +5,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.camera.core.ExperimentalGetImage
 import androidx.compose.animation.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -41,6 +42,7 @@ import com.example.shelfpalace.navigation.Destinations
 import com.example.shelfpalace.ui.components.*
 import com.example.shelfpalace.ui.screens.*
 import com.example.shelfpalace.ui.theme.ShelfPalaceTheme
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @ExperimentalGetImage
@@ -62,11 +64,18 @@ fun MainApp(
     var showMovieFormatSelection by remember { mutableStateOf(false) }
     var showMusicFormatSelection by remember { mutableStateOf(false) }
 
+    var isAppLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        delay(800)
+        isAppLoading = false
+    }
+
     val isRoot = currentDestination?.hasRoute<Destinations.LibraryDashboard>() == true
     var backPressedTime by remember { mutableLongStateOf(0L) }
     val context = LocalContext.current
 
-    BackHandler(enabled = isRoot) {
+    BackHandler(enabled = isRoot && !isAppLoading) {
         val currentTime = System.currentTimeMillis()
         if (currentTime - backPressedTime < 2000) {
             (context as? Activity)?.finish()
@@ -76,8 +85,33 @@ fun MainApp(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        ShelfPalaceBackground()
+    if (isAppLoading) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFF0D0221)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                NeonHeader(
+                    text = "LOADING...",
+                    fullWidth = false,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                CircularProgressIndicator(
+                    color = MaterialTheme.colorScheme.primary,
+                    strokeWidth = 3.dp,
+                    modifier = Modifier.size(36.dp)
+                )
+            }
+        }
+    } else {
+        Box(modifier = Modifier.fillMaxSize()) {
+            ShelfPalaceBackground()
         
         Scaffold(
             containerColor = Color.Transparent,
@@ -468,7 +502,9 @@ fun MainApp(
                                     gameId = route.gameId, 
                                     igdbId = igdbId
                                 )
-                            )
+                            ) {
+                                popUpTo<Destinations.AddEditGame> { inclusive = true }
+                            }
                         },
                         onBack = { navController.popBackStack() },
                         onClose = {
@@ -752,6 +788,7 @@ fun MainApp(
                 showMusicFormatSelection = false
             }
         )
+    }
     }
 }
 

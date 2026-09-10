@@ -25,6 +25,12 @@ interface MovieDao {
     @Query("SELECT * FROM movies WHERE id = :id")
     suspend fun getMovieById(id: String): MovieEntity?
 
+    @Query("SELECT * FROM movies WHERE formatId = :formatId")
+    suspend fun getMoviesForFormatList(formatId: String): List<MovieEntity>
+
+    @Query("SELECT * FROM movies")
+    suspend fun getAllMoviesList(): List<MovieEntity>
+
     @Query("SELECT * FROM movies WHERE LOWER(title) = LOWER(:title) AND formatId = :formatId")
     suspend fun getMovieByTitleAndFormat(title: String, formatId: String): MovieEntity?
 

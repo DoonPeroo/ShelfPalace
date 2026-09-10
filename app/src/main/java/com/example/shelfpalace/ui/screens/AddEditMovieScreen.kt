@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -719,7 +717,7 @@ fun AddEditMovieScreen(
                 text = stringResource(R.string.action_save_movie),
                 onClick = {
                     scope.launch {
-                        if (!isEditMode && title.isNotBlank() && repository.doesMovieExist(title, currentFormatId)) {
+                        if (title.isNotBlank() && repository.doesMovieExistExcludingId(title, currentFormatId, movieId)) {
                             showDuplicateDialog = true
                         } else {
                             saveMovie()

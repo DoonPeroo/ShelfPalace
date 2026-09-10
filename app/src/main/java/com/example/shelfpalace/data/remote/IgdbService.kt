@@ -38,7 +38,7 @@ object IgdbService {
 
     private val api = retrofit.create(IgdbApi::class.java)
 
-    private val commonFields = "name, summary, cover.url, first_release_date, genres.name, involved_companies.company.name, rating, aggregated_rating, platforms, screenshots.url"
+    private const val commonFields = "name, summary, cover.url, first_release_date, genres.name, involved_companies.company.name, rating, aggregated_rating, total_rating, platforms, screenshots.url, videos.video_id, videos.name"
 
     suspend fun search(title: String, platformId: String? = null): List<IgdbGame> {
         if (clientId.isEmpty() || accessToken.isEmpty()) return emptyList()

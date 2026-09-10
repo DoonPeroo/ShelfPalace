@@ -30,8 +30,29 @@ class MusicRepository(private val musicDao: MusicDao) {
     suspend fun getMusicById(id: String): Music? =
         musicDao.getMusicById(id)?.toExternalModel()
 
+    private fun isTitleDuplicate(existingTitle: String, enteredTitle: String): Boolean {
+        val clean1 = existingTitle.lowercase().trim()
+        val clean2 = enteredTitle.lowercase().trim()
+        if (clean1 == clean2) return true
+        val norm1 = clean1.replace("[^a-z0-9]".toRegex(), "")
+        val norm2 = clean2.replace("[^a-z0-9]".toRegex(), "")
+        return norm1.isNotEmpty() && norm1 == norm2
+    }
+
     suspend fun doesMusicExist(title: String, formatId: String): Boolean {
-        return musicDao.getMusicByTitleAndFormat(title, formatId) != null
+        return doesMusicExistExcludingId(title, formatId, null)
+    }
+
+    suspend fun doesMusicExistExcludingId(title: String, formatId: String, excludeId: String?): Boolean {
+        if (title.isBlank()) return false
+        val list = if (formatId.isBlank() || formatId == "all") {
+            musicDao.getAllMusicList()
+        } else {
+            musicDao.getMusicForFormatList(formatId)
+        }
+        return list.any { existing ->
+            existing.id != excludeId && isTitleDuplicate(existing.title, title)
+        }
     }
 
     suspend fun getMusicByBarcode(barcode: String): Music? =

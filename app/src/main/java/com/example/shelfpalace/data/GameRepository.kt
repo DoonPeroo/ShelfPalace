@@ -34,8 +34,29 @@ class GameRepository(private val gameDao: GameDao) {
         return gameDao.getGameById(id)?.toExternalModel()
     }
 
+    private fun isTitleDuplicate(existingTitle: String, enteredTitle: String): Boolean {
+        val clean1 = existingTitle.lowercase().trim()
+        val clean2 = enteredTitle.lowercase().trim()
+        if (clean1 == clean2) return true
+        val norm1 = clean1.replace("[^a-z0-9]".toRegex(), "")
+        val norm2 = clean2.replace("[^a-z0-9]".toRegex(), "")
+        return norm1.isNotEmpty() && norm1 == norm2
+    }
+
     suspend fun doesGameExist(title: String, platformId: String): Boolean {
-        return gameDao.getGameByTitleAndPlatform(title, platformId) != null
+        return doesGameExistExcludingId(title, platformId, null)
+    }
+
+    suspend fun doesGameExistExcludingId(title: String, platformId: String, excludeId: String?): Boolean {
+        if (title.isBlank()) return false
+        val list = if (platformId.isBlank() || platformId == "all") {
+            gameDao.getAllGamesList()
+        } else {
+            gameDao.getGamesForPlatformList(platformId)
+        }
+        return list.any { existing ->
+            existing.id != excludeId && isTitleDuplicate(existing.title, title)
+        }
     }
 
     suspend fun getGameByBarcode(barcode: String): Game? {

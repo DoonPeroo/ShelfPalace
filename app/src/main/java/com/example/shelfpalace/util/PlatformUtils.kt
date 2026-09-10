@@ -1,6 +1,5 @@
 package com.example.shelfpalace.util
 
-import androidx.compose.ui.graphics.Color
 import com.example.shelfpalace.data.StaticData
 
 object PlatformUtils {

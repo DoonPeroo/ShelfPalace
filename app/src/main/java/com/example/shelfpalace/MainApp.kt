@@ -4,7 +4,6 @@ import android.app.Activity
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.camera.core.ExperimentalGetImage
-import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,8 +27,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import com.example.shelfpalace.data.GameRepository
@@ -136,7 +133,7 @@ fun MainApp(
 
                 if (visible) {
                     val activeTab = when {
-                        currentDestination?.hierarchy?.any { 
+                        currentDestination.hierarchy.any { 
                             it.hasRoute<Destinations.LibraryDashboard>() ||
                             it.hasRoute<Destinations.ManufacturerList>() || 
                             it.hasRoute<Destinations.MediaSelection>() ||
@@ -149,10 +146,10 @@ fun MainApp(
                             it.hasRoute<Destinations.GameDetail>() ||
                             it.hasRoute<Destinations.MovieDetail>() ||
                             it.hasRoute<Destinations.MusicDetail>()
-                        } == true -> NavTab.LIBRARY
-                        currentDestination?.hierarchy?.any { it.hasRoute<Destinations.Favorites>() } == true -> NavTab.FAVORITES
-                        currentDestination?.hierarchy?.any { it.hasRoute<Destinations.Statistics>() } == true -> NavTab.STATISTICS
-                        currentDestination?.hierarchy?.any { it.hasRoute<Destinations.Settings>() } == true -> NavTab.SETTINGS
+                        } -> NavTab.LIBRARY
+                        currentDestination.hierarchy.any { it.hasRoute<Destinations.Favorites>() } -> NavTab.FAVORITES
+                        currentDestination.hierarchy.any { it.hasRoute<Destinations.Statistics>() } -> NavTab.STATISTICS
+                        currentDestination.hierarchy.any { it.hasRoute<Destinations.Settings>() } -> NavTab.SETTINGS
                         else -> NavTab.NONE
                     }
 

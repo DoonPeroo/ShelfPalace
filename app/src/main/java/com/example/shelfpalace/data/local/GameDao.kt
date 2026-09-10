@@ -25,6 +25,12 @@ interface GameDao {
     @Query("SELECT * FROM games WHERE id = :id")
     suspend fun getGameById(id: String): GameEntity?
 
+    @Query("SELECT * FROM games WHERE platformId = :platformId")
+    suspend fun getGamesForPlatformList(platformId: String): List<GameEntity>
+
+    @Query("SELECT * FROM games")
+    suspend fun getAllGamesList(): List<GameEntity>
+
     @Query("SELECT * FROM games WHERE LOWER(title) = LOWER(:title) AND platformId = :platformId")
     suspend fun getGameByTitleAndPlatform(title: String, platformId: String): GameEntity?
 

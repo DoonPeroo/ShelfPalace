@@ -25,6 +25,12 @@ interface MusicDao {
     @Query("SELECT * FROM music WHERE id = :id")
     suspend fun getMusicById(id: String): MusicEntity?
 
+    @Query("SELECT * FROM music WHERE formatId = :formatId")
+    suspend fun getMusicForFormatList(formatId: String): List<MusicEntity>
+
+    @Query("SELECT * FROM music")
+    suspend fun getAllMusicList(): List<MusicEntity>
+
     @Query("SELECT * FROM music WHERE LOWER(title) = LOWER(:title) AND formatId = :formatId")
     suspend fun getMusicByTitleAndFormat(title: String, formatId: String): MusicEntity?
 

@@ -34,8 +34,29 @@ class MovieRepository(private val movieDao: MovieDao) {
         return movieDao.getMovieById(id)?.toExternalModel()
     }
 
+    private fun isTitleDuplicate(existingTitle: String, enteredTitle: String): Boolean {
+        val clean1 = existingTitle.lowercase().trim()
+        val clean2 = enteredTitle.lowercase().trim()
+        if (clean1 == clean2) return true
+        val norm1 = clean1.replace("[^a-z0-9]".toRegex(), "")
+        val norm2 = clean2.replace("[^a-z0-9]".toRegex(), "")
+        return norm1.isNotEmpty() && norm1 == norm2
+    }
+
     suspend fun doesMovieExist(title: String, formatId: String): Boolean {
-        return movieDao.getMovieByTitleAndFormat(title, formatId) != null
+        return doesMovieExistExcludingId(title, formatId, null)
+    }
+
+    suspend fun doesMovieExistExcludingId(title: String, formatId: String, excludeId: String?): Boolean {
+        if (title.isBlank()) return false
+        val list = if (formatId.isBlank() || formatId == "all") {
+            movieDao.getAllMoviesList()
+        } else {
+            movieDao.getMoviesForFormatList(formatId)
+        }
+        return list.any { existing ->
+            existing.id != excludeId && isTitleDuplicate(existing.title, title)
+        }
     }
 
     suspend fun getMovieByBarcode(barcode: String): Movie? {

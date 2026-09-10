@@ -6,8 +6,6 @@ import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.activity.result.contract.ActivityResultContracts.TakePicture
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -68,6 +66,7 @@ import com.example.shelfpalace.util.StorageUtil.loadBitmapFromUri
 import com.example.shelfpalace.util.StorageUtil.saveBitmapToShelfPalaceDir
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Date
@@ -162,6 +161,26 @@ fun AddEditGameScreen(
     val saveGame: () -> Unit = {
         scope.launch {
             try {
+                if (currentIgdbId == null && title.isNotBlank()) {
+                    try {
+                        val matches = withContext(Dispatchers.IO) {
+                            IgdbService.search(title, currentPlatformId)
+                        }
+                        val match = matches.firstOrNull()
+                        if (match != null) {
+                            if (userRating == null) userRating = match.rating
+                            if (criticRating == null) criticRating = match.aggregatedRating
+                            if (currentIgdbId == null) currentIgdbId = match.id
+                            if (developer.isBlank()) developer = match.involvedCompanies?.getOrNull(0)?.company?.name ?: ""
+                            if (publisher.isBlank()) publisher = match.involvedCompanies?.getOrNull(1)?.company?.name ?: ""
+                            if (genre.isBlank()) genre = match.genres?.firstOrNull()?.name ?: ""
+                            if (description.isBlank()) description = match.summary ?: ""
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+
                 val targetId = existingGame?.id ?: gameId?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString()
                 val isCurrentlyEditing = !gameId.isNullOrBlank() || existingGame != null
                 val originalDateAdded = existingGame?.dateAdded ?: dateAdded
@@ -239,6 +258,27 @@ fun AddEditGameScreen(
                 it.cover?.url?.let { url ->
                     val highResUrl = if (url.startsWith("//")) "https:$url" else url
                     coverUri = highResUrl.replace("t_thumb", "t_cover_big")
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(title, currentPlatformId) {
+        if (title.length >= 3 && currentIgdbId == null) {
+            delay(800)
+            if (title.length >= 3 && currentIgdbId == null) {
+                try {
+                    val matches = withContext(Dispatchers.IO) {
+                        IgdbService.search(title, currentPlatformId)
+                    }
+                    val match = matches.firstOrNull()
+                    if (match != null && currentIgdbId == null) {
+                        if (userRating == null) userRating = match.rating
+                        if (criticRating == null) criticRating = match.aggregatedRating
+                        currentIgdbId = match.id
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
             }
         }
@@ -961,7 +1001,7 @@ fun AddEditGameScreen(
                 text = stringResource(R.string.action_save_game),
                 onClick = {
                     scope.launch {
-                        if (!isEditMode && title.isNotBlank() && repository.doesGameExist(title, currentPlatformId)) {
+                        if (title.isNotBlank() && repository.doesGameExistExcludingId(title, currentPlatformId, gameId)) {
                             showDuplicateDialog = true
                         } else {
                             saveGame()

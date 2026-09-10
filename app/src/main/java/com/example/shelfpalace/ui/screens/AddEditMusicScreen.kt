@@ -16,7 +16,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -29,7 +28,6 @@ import com.example.shelfpalace.R
 import com.example.shelfpalace.data.Music
 import com.example.shelfpalace.data.MusicRepository
 import com.example.shelfpalace.ui.components.*
-import com.example.shelfpalace.ui.theme.SynthwaveCyan
 import com.example.shelfpalace.ui.theme.SynthwaveDark
 import com.example.shelfpalace.util.DateUtils
 import com.example.shelfpalace.util.StorageUtil
@@ -708,7 +706,7 @@ fun AddEditMusicScreen(
                 text = stringResource(R.string.action_save_music),
                 onClick = {
                     scope.launch {
-                        if (!isEditMode && title.isNotBlank() && repository.doesMusicExist(title, currentFormatId)) {
+                        if (title.isNotBlank() && repository.doesMusicExistExcludingId(title, currentFormatId, musicId)) {
                             showDuplicateDialog = true
                         } else {
                             saveMusic()

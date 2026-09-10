@@ -1,62 +1,52 @@
 package com.example.shelfpalace.ui.screens
 
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
+import android.content.Intent
+import android.net.Uri
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.example.shelfpalace.R
+import com.example.shelfpalace.data.Game
 import com.example.shelfpalace.data.GameRepository
 import com.example.shelfpalace.data.remote.IgdbService
 import com.example.shelfpalace.ui.components.*
 import com.example.shelfpalace.ui.theme.DarkBackground
 import com.example.shelfpalace.util.DateUtils
 import com.example.shelfpalace.util.PlatformUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.shelfpalace.data.Game
+import com.example.shelfpalace.data.remote.IgdbVideo
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,36 +68,66 @@ fun GameDetailScreen(
     val deepPurple = Color(0xFF9C27B0)
     
     var screenshots by remember { mutableStateOf<List<String>>(emptyList()) }
+    var videos by remember { mutableStateOf<List<IgdbVideo>>(emptyList()) }
     var isMediaLoading by remember { mutableStateOf(false) }
     
-    LaunchedEffect(game) {
+    LaunchedEffect(game?.id) {
         val currentGame = game ?: return@LaunchedEffect
-        if (screenshots.isNotEmpty()) return@LaunchedEffect
         
-        isMediaLoading = true
-        try {
-            var targetIgdbId = currentGame.igdbId
-            
-            // If ID is missing, try to find it by title
-            if (targetIgdbId == null) {
-                val searchResults = IgdbService.search(currentGame.title, currentGame.platformId)
-                targetIgdbId = searchResults.firstOrNull { 
-                    it.name?.equals(currentGame.title, ignoreCase = true) == true 
-                }?.id ?: searchResults.firstOrNull()?.id
-            }
-            
-            targetIgdbId?.let { id ->
-                val igdbGame = IgdbService.getGameById(id)
-                igdbGame?.screenshots?.let { list ->
-                    screenshots = list.mapNotNull { it.url }.map { url ->
-                        if (url.startsWith("//")) "https:$url" else url
-                    }.map { it.replace("t_thumb", "t_720p") }
+        // 1. Fetch Ratings if missing
+        if (currentGame.userRating == null || currentGame.criticRating == null) {
+            try {
+                val matches = withContext(Dispatchers.IO) {
+                    IgdbService.search(currentGame.title, currentGame.platformId)
                 }
+                val match = matches.firstOrNull()
+                if (match != null) {
+                    val newUserRating = currentGame.userRating ?: match.rating ?: match.totalRating
+                    val newCriticRating = currentGame.criticRating ?: match.aggregatedRating ?: match.totalRating
+                    val newIgdbId = currentGame.igdbId ?: match.id
+                    
+                    if (newUserRating != currentGame.userRating || 
+                        newCriticRating != currentGame.criticRating || 
+                        newIgdbId != currentGame.igdbId) {
+                        
+                        val updatedGame = currentGame.copy(
+                            userRating = newUserRating,
+                            criticRating = newCriticRating,
+                            igdbId = newIgdbId
+                        )
+                        repository.updateGame(updatedGame)
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        } finally {
-            isMediaLoading = false
+        }
+
+        // 2. Fetch Screenshots if empty
+        if (screenshots.isEmpty()) {
+            isMediaLoading = true
+            try {
+                val targetId = currentGame.igdbId ?: withContext(Dispatchers.IO) {
+                    IgdbService.search(currentGame.title, currentGame.platformId).firstOrNull()?.id
+                }
+                if (targetId != null) {
+                    val igdbGame = withContext(Dispatchers.IO) { IgdbService.getGameById(targetId) }
+                    igdbGame?.let { fetched ->
+                        fetched.screenshots?.let { list ->
+                            screenshots = list.mapNotNull { it.url }.map { url ->
+                                if (url.startsWith("//")) "https:$url" else url
+                            }.map { it.replace("t_thumb", "t_720p") }
+                        }
+                        fetched.videos?.let { list ->
+                            videos = list.filter { !it.videoId.isNullOrBlank() }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                isMediaLoading = false
+            }
         }
     }
     
@@ -242,7 +262,8 @@ fun GameDetailScreen(
 
                         Column(
                             modifier = Modifier.weight(1f),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
                             Text(
                                 text = currentGame.title,
@@ -286,6 +307,7 @@ fun GameDetailScreen(
                                 platformId = currentGame.platformId,
                                 accentColor = accentColor, 
                                 screenshots = screenshots, 
+                                videos = videos,
                                 isLoading = isMediaLoading, 
                                 onImageClick = { selectedImageIndex = it }
                             )
@@ -384,7 +406,23 @@ fun GameInfoTab(
                 HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
                 InfoRow(icon = Icons.Rounded.Category, label = "Genre", value = game.genre.ifEmpty { "None" }, color = accentColor)
                 HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
+                val userFormatted = game.userRating?.takeIf { it > 0 }?.let { "User: %.1f / 100".format(it) }
+                val criticFormatted = game.criticRating?.takeIf { it > 0 }?.let { "Critic: %.1f / 100".format(it) }
+                val ratingsDisplay = when {
+                    userFormatted != null && criticFormatted != null -> "$userFormatted | $criticFormatted"
+                    userFormatted != null -> userFormatted
+                    criticFormatted != null -> criticFormatted
+                    else -> "(None)"
+                }
+
                 InfoRow(icon = Icons.Rounded.Event, label = "Released", value = DateUtils.formatDisplayDate(game.releaseDate).ifEmpty { "None" }, color = accentColor)
+                HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
+                InfoRow(
+                    icon = Icons.Rounded.Star, 
+                    label = "Ratings", 
+                    value = ratingsDisplay, 
+                    color = accentColor
+                )
             }
         }
 
@@ -418,12 +456,15 @@ fun GameMediaTab(
     platformId: String,
     accentColor: Color, 
     screenshots: List<String>, 
+    videos: List<IgdbVideo>,
     isLoading: Boolean, 
     onImageClick: (Int) -> Unit
 ) {
     val isDualScreen = platformId == "nintendo_ds" || platformId == "nintendo_3ds"
-    
+    val context = LocalContext.current
+
     Column {
+        // Screenshots Section
         Text(
             "Screenshots",
             style = MaterialTheme.typography.titleMedium.copy(color = Color.White, fontWeight = FontWeight.Bold)
@@ -478,6 +519,114 @@ fun GameMediaTab(
                             .clickable { onImageClick(index) },
                         contentScale = ContentScale.Fit
                     )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Videos Section
+        Text(
+            "Videos",
+            style = MaterialTheme.typography.titleMedium.copy(color = Color.White, fontWeight = FontWeight.Bold)
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(130.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = accentColor, modifier = Modifier.size(32.dp))
+            }
+        } else if (videos.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
+                    .background(Color.White.copy(alpha = 0.05f), getAppCorners(8.dp))
+                    .border(1.dp, Color.White.copy(alpha = 0.1f), getAppCorners(8.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Rounded.VideocamOff, contentDescription = null, tint = Color.White.copy(alpha = 0.2f), modifier = Modifier.size(40.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("No videos found on IGDB", color = Color.White.copy(alpha = 0.4f))
+                }
+            }
+        } else {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                itemsIndexed(videos) { _, video ->
+                    val videoId = video.videoId ?: return@itemsIndexed
+                    val thumbnailUrl = "https://img.youtube.com/vi/$videoId/hqdefault.jpg"
+                    val videoTitle = video.name.takeUnless { it.isNullOrBlank() } ?: "Trailer / Gameplay"
+
+                    Column(
+                        modifier = Modifier
+                            .width(220.dp)
+                            .clickable {
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=$videoId"))
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                            }
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(124.dp)
+                                .clip(getAppCorners(12.dp))
+                                .border(1.dp, Color.White.copy(alpha = 0.15f), getAppCorners(12.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AsyncImage(
+                                model = thumbnailUrl,
+                                contentDescription = videoTitle,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+
+                            // Dark overlay
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.35f))
+                            )
+
+                            // Play Button Badge
+                            Surface(
+                                color = Color.Black.copy(alpha = 0.7f),
+                                shape = getAppCorners(20.dp),
+                                border = BorderStroke(1.dp, accentColor)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.PlayArrow,
+                                    contentDescription = "Play Video",
+                                    tint = accentColor,
+                                    modifier = Modifier
+                                        .padding(8.dp)
+                                        .size(24.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Text(
+                            text = videoTitle,
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }

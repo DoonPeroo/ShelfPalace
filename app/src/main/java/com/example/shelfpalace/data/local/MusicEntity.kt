@@ -19,6 +19,8 @@ data class MusicEntity(
     val isFavorite: Boolean = false,
     val dateAdded: Long,
     val status: String,
+    val purchaseDate: String = "",
+    val pricePaid: String = "",
     val notes: String
 )
 
@@ -36,6 +38,8 @@ fun MusicEntity.toExternalModel() = Music(
     isFavorite = isFavorite,
     dateAdded = dateAdded,
     status = status,
+    purchaseDate = purchaseDate,
+    pricePaid = pricePaid,
     notes = notes
 )
 
@@ -53,5 +57,7 @@ fun Music.toEntity() = MusicEntity(
     isFavorite = isFavorite,
     dateAdded = dateAdded,
     status = status,
+    purchaseDate = purchaseDate,
+    pricePaid = pricePaid,
     notes = notes
 )

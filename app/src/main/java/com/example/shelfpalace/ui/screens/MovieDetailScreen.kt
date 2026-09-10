@@ -502,8 +502,24 @@ fun MovieMyDetailsTab(
             HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
             DetailRow(
                 icon = Icons.Rounded.CalendarMonth,
-                label = "Added on",
+                label = "Added to Library on",
                 value = DateUtils.formatTimestamp(movie.dateAdded),
+                color = accentColor,
+                onClick = null
+            )
+            HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
+            DetailRow(
+                icon = Icons.Rounded.ShoppingBag,
+                label = "Purchased on",
+                value = if (movie.purchaseDate.isNotBlank()) DateUtils.formatDisplayDate(movie.purchaseDate).ifEmpty { movie.purchaseDate } else "(None)",
+                color = accentColor,
+                onClick = null
+            )
+            HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
+            DetailRow(
+                icon = Icons.Rounded.AttachMoney,
+                label = "Paid",
+                value = movie.pricePaid.ifBlank { "(None)" },
                 color = accentColor,
                 onClick = null
             )

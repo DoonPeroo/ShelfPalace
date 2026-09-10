@@ -285,6 +285,7 @@ fun MainApp(
                             }
                         },
                         onManufacturerSelected = { id -> navController.navigate(Destinations.PlatformList(id)) },
+                        onPlatformSelected = { id -> navController.navigate(Destinations.GameList(platformId = id)) },
                         onMoviesHeaderClick = { query ->
                             if (query.isNotBlank()) {
                                 navController.navigate(Destinations.Search(initialQuery = query))
@@ -696,6 +697,7 @@ fun MainApp(
                         gameRepository = repository,
                         movieRepository = movieRepository,
                         musicRepository = musicRepository,
+                        settingsRepository = settingsRepository,
                         onBack = { navController.popBackStack() }
                     )
                 }

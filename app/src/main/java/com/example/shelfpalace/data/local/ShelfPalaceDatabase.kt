@@ -5,7 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [GameEntity::class, MovieEntity::class, MusicEntity::class], version = 21, exportSchema = false)
+@Database(entities = [GameEntity::class, MovieEntity::class, MusicEntity::class], version = 22, exportSchema = false)
 abstract class ShelfPalaceDatabase : RoomDatabase() {
     abstract fun gameDao(): GameDao
     abstract fun movieDao(): MovieDao

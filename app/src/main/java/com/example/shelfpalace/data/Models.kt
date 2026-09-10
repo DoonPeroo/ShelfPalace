@@ -36,6 +36,8 @@ data class Game(
     val status: String = "Unplayed",
     val condition: String = "Sealed",
     val gameEdition: String = "Retail",
+    val purchaseDate: String = "",
+    val pricePaid: String = "",
     val notes: String = ""
 )
 
@@ -54,6 +56,8 @@ data class Movie(
     val isFavorite: Boolean = false,
     val dateAdded: Long = System.currentTimeMillis(),
     val status: String = "Plan to watch",
+    val purchaseDate: String = "",
+    val pricePaid: String = "",
     val notes: String = ""
 )
 
@@ -79,6 +83,8 @@ data class Music(
     val isFavorite: Boolean = false,
     val dateAdded: Long = System.currentTimeMillis(),
     val status: String = "Plan to listen",
+    val purchaseDate: String = "",
+    val pricePaid: String = "",
     val notes: String = ""
 )
 

@@ -63,14 +63,17 @@ fun MovieListScreen(
     val focusRequester = remember { FocusRequester() }
 
     val currentSortOption by settingsRepository.sortOption.collectAsState(initial = SortOption.NAME)
+    val disabledIds by settingsRepository.disabledIds.collectAsState(initial = emptySet())
     val scope = rememberCoroutineScope()
 
     val movies by remember(repository, formatId) { repository.getMoviesForFormat(formatId) }
         .collectAsState(initial = emptyList())
 
-    val filteredMovies = remember(movies, searchQuery, currentSortOption) {
-        val filtered = if (searchQuery.isEmpty()) movies
-        else movies.filter { it.title.matchesSearchQuery(searchQuery) }
+    val filteredMovies = remember(movies, searchQuery, currentSortOption, disabledIds) {
+        if (disabledIds.contains("media_movies")) return@remember emptyList()
+        val validList = movies.filter { !disabledIds.contains(it.formatId) }
+        val filtered = if (searchQuery.isEmpty()) validList
+        else validList.filter { it.title.matchesSearchQuery(searchQuery) }
 
         when (currentSortOption) {
             SortOption.NAME -> filtered.sortedBy { it.title }

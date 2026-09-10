@@ -16,7 +16,7 @@ interface MusicDao {
     @Query("SELECT * FROM music WHERE title LIKE '%' || :query || '%' OR artist LIKE '%' || :query || '%'")
     fun searchMusic(query: String): Flow<List<MusicEntity>>
 
-    @Query("SELECT * FROM music")
+    @Query("SELECT * FROM music ORDER BY dateAdded DESC")
     fun getAllMusic(): Flow<List<MusicEntity>>
 
     @Query("SELECT * FROM music WHERE id = :id")

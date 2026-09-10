@@ -65,6 +65,29 @@ object PlatformUtils {
     fun getPlatformName(platformId: String): String {
         return StaticData.platforms.find { it.id == platformId }?.name ?: platformId
     }
+
+    fun getMovieFormatTag(formatId: String): String {
+        return when (formatId) {
+            "vhs" -> "VHS"
+            "laserdisc" -> "LASERDISC"
+            "vcd" -> "VCD"
+            "dvd" -> "DVD"
+            "hddvd" -> "HD-DVD"
+            "bluray" -> "BLU-RAY"
+            "bluray3d" -> "3D BLU-RAY"
+            "bluray4k" -> "4K BLU-RAY"
+            else -> formatId.uppercase()
+        }
+    }
+
+    fun getMusicFormatTag(formatId: String): String {
+        return when (formatId) {
+            "cassette" -> "CASSETTE"
+            "cd" -> "CD"
+            "vinyl" -> "VINYL"
+            else -> formatId.uppercase()
+        }
+    }
 }
 
 fun String.matchesSearchQuery(query: String): Boolean {

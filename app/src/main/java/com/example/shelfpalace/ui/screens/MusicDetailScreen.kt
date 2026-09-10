@@ -504,8 +504,24 @@ fun MusicDetailsTab(
             HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
             DetailRow(
                 icon = Icons.Rounded.CalendarMonth,
-                label = "Added on",
+                label = "Added to Library on",
                 value = DateUtils.formatTimestamp(music.dateAdded),
+                color = accentColor,
+                onClick = null
+            )
+            HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
+            DetailRow(
+                icon = Icons.Rounded.ShoppingBag,
+                label = "Purchased on",
+                value = if (music.purchaseDate.isNotBlank()) DateUtils.formatDisplayDate(music.purchaseDate).ifEmpty { music.purchaseDate } else "(None)",
+                color = accentColor,
+                onClick = null
+            )
+            HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
+            DetailRow(
+                icon = Icons.Rounded.AttachMoney,
+                label = "Paid",
+                value = music.pricePaid.ifBlank { "(None)" },
                 color = accentColor,
                 onClick = null
             )

@@ -127,6 +127,8 @@ fun AddEditGameScreen(
     var gameEdition by rememberSaveable { mutableStateOf("Retail") }
     var editionExpanded by remember { mutableStateOf(false) }
     val editionOptions = listOf("Retail", "Digital", "Retail (Collector's Edition)", "Digital (Collector's Edition)")
+    var purchaseDate by rememberSaveable { mutableStateOf("") }
+    var pricePaid by rememberSaveable { mutableStateOf("") }
     var userRating by rememberSaveable { mutableStateOf<Double?>(null) }
     var criticRating by rememberSaveable { mutableStateOf<Double?>(null) }
     var currentIgdbId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -146,6 +148,13 @@ fun AddEditGameScreen(
     var monthExpanded by remember { mutableStateOf(false) }
     var yearExpanded by remember { mutableStateOf(false) }
     
+    var selectedPurchaseDay by rememberSaveable { mutableStateOf("") }
+    var selectedPurchaseMonth by rememberSaveable { mutableStateOf("") }
+    var selectedPurchaseYear by rememberSaveable { mutableStateOf("") }
+    var purchaseDayExpanded by remember { mutableStateOf(false) }
+    var purchaseMonthExpanded by remember { mutableStateOf(false) }
+    var purchaseYearExpanded by remember { mutableStateOf(false) }
+    
     val scope = rememberCoroutineScope()
     val isEditMode = gameId != null
     var isInitialized by remember { mutableStateOf(false) }
@@ -156,6 +165,7 @@ fun AddEditGameScreen(
             try {
                 val targetId = existingGame?.id ?: gameId?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString()
                 val isCurrentlyEditing = !gameId.isNullOrBlank() || existingGame != null
+                val originalDateAdded = existingGame?.dateAdded ?: dateAdded
 
                 val game = (existingGame ?: Game(
                     id = targetId,
@@ -163,7 +173,8 @@ fun AddEditGameScreen(
                     title = title,
                     coverUri = coverUri,
                     releaseDate = releaseDate,
-                    description = description
+                    description = description,
+                    dateAdded = originalDateAdded
                 )).copy(
                     id = targetId,
                     platformId = currentPlatformId,
@@ -180,7 +191,11 @@ fun AddEditGameScreen(
                     userRating = userRating,
                     criticRating = criticRating,
                     igdbId = currentIgdbId,
-                    dateAdded = dateAdded
+                    dateAdded = originalDateAdded,
+                    status = existingGame?.status ?: "Unplayed",
+                    purchaseDate = purchaseDate,
+                    pricePaid = pricePaid,
+                    notes = existingGame?.notes ?: ""
                 )
                 withContext(NonCancellable) {
                     if (isCurrentlyEditing) {
@@ -275,6 +290,8 @@ fun AddEditGameScreen(
                 isFavorite = it.isFavorite
                 condition = it.condition
                 gameEdition = it.gameEdition
+                purchaseDate = it.purchaseDate
+                pricePaid = it.pricePaid
                 userRating = it.userRating
                 criticRating = it.criticRating
                 currentIgdbId = it.igdbId
@@ -287,6 +304,14 @@ fun AddEditGameScreen(
                         selectedYear = parts[0]
                         selectedMonth = parts[1]
                         selectedDay = parts[2]
+                    }
+                }
+                if (it.purchaseDate.isNotEmpty()) {
+                    val parts = it.purchaseDate.split("-")
+                    if (parts.size == 3) {
+                        selectedPurchaseYear = parts[0]
+                        selectedPurchaseMonth = parts[1]
+                        selectedPurchaseDay = parts[2]
                     }
                 }
                 isInitialized = true
@@ -695,6 +720,158 @@ fun AddEditGameScreen(
                         }
                     }
 
+                    Text(
+                        text = "PURCHASE DATE",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        // Day Dropdown
+                        ExposedDropdownMenuBox(
+                            expanded = purchaseDayExpanded,
+                            onExpandedChange = { purchaseDayExpanded = !purchaseDayExpanded },
+                            modifier = Modifier.weight(0.8f)
+                        ) {
+                            OutlinedTextField(
+                                value = selectedPurchaseDay,
+                                onValueChange = {},
+                                readOnly = true,
+                                placeholder = { Text("DD", fontSize = 12.sp) },
+                                colors = synthwaveTextFieldColors(),
+                                modifier = Modifier
+                                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                                    .fillMaxWidth(),
+                                shape = getAppCorners(8.dp),
+                                singleLine = true
+                            )
+
+                            ExposedDropdownMenu(
+                                expanded = purchaseDayExpanded,
+                                onDismissRequest = { purchaseDayExpanded = false },
+                                containerColor = Color.Black.copy(alpha = 0.95f),
+                                modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.primary, getAppCorners(8.dp))
+                            ) {
+                                days.forEach { dayOption ->
+                                    DropdownMenuItem(
+                                        text = { Text(text = dayOption, color = Color.White) },
+                                        onClick = {
+                                            selectedPurchaseDay = dayOption
+                                            purchaseDayExpanded = false
+                                            purchaseDate = if (selectedPurchaseDay.isNotEmpty() && selectedPurchaseMonth.isNotEmpty() && selectedPurchaseYear.isNotEmpty()) {
+                                                "$selectedPurchaseYear-$selectedPurchaseMonth-$selectedPurchaseDay"
+                                            } else if (selectedPurchaseYear.isNotEmpty()) {
+                                                if (selectedPurchaseMonth.isNotEmpty()) "$selectedPurchaseYear-$selectedPurchaseMonth" else selectedPurchaseYear
+                                            } else ""
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        // Month Dropdown
+                        ExposedDropdownMenuBox(
+                            expanded = purchaseMonthExpanded,
+                            onExpandedChange = { purchaseMonthExpanded = !purchaseMonthExpanded },
+                            modifier = Modifier.weight(0.8f)
+                        ) {
+                            OutlinedTextField(
+                                value = selectedPurchaseMonth,
+                                onValueChange = {},
+                                readOnly = true,
+                                placeholder = { Text("MM", fontSize = 12.sp) },
+                                colors = synthwaveTextFieldColors(),
+                                modifier = Modifier
+                                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                                    .fillMaxWidth(),
+                                shape = getAppCorners(8.dp),
+                                singleLine = true
+                            )
+
+                            ExposedDropdownMenu(
+                                expanded = purchaseMonthExpanded,
+                                onDismissRequest = { purchaseMonthExpanded = false },
+                                containerColor = Color.Black.copy(alpha = 0.95f),
+                                modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.primary, getAppCorners(8.dp))
+                            ) {
+                                months.forEach { monthOption ->
+                                    DropdownMenuItem(
+                                        text = { Text(text = monthOption, color = Color.White) },
+                                        onClick = {
+                                            selectedPurchaseMonth = monthOption
+                                            purchaseMonthExpanded = false
+                                            purchaseDate = if (selectedPurchaseDay.isNotEmpty() && selectedPurchaseMonth.isNotEmpty() && selectedPurchaseYear.isNotEmpty()) {
+                                                "$selectedPurchaseYear-$selectedPurchaseMonth-$selectedPurchaseDay"
+                                            } else if (selectedPurchaseYear.isNotEmpty()) {
+                                                if (selectedPurchaseMonth.isNotEmpty()) "$selectedPurchaseYear-$selectedPurchaseMonth" else selectedPurchaseYear
+                                            } else ""
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        // Year Dropdown
+                        ExposedDropdownMenuBox(
+                            expanded = purchaseYearExpanded,
+                            onExpandedChange = { purchaseYearExpanded = !purchaseYearExpanded },
+                            modifier = Modifier.weight(1.2f)
+                        ) {
+                            OutlinedTextField(
+                                value = selectedPurchaseYear,
+                                onValueChange = {},
+                                readOnly = true,
+                                placeholder = { Text("YYYY", fontSize = 12.sp) },
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = purchaseYearExpanded)
+                                },
+                                colors = synthwaveTextFieldColors(),
+                                modifier = Modifier
+                                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                                    .fillMaxWidth(),
+                                shape = getAppCorners(8.dp),
+                                singleLine = true
+                            )
+
+                            ExposedDropdownMenu(
+                                expanded = purchaseYearExpanded,
+                                onDismissRequest = { purchaseYearExpanded = false },
+                                containerColor = Color.Black.copy(alpha = 0.95f),
+                                modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.primary, getAppCorners(8.dp))
+                            ) {
+                                years.forEach { yearOption ->
+                                    DropdownMenuItem(
+                                        text = { Text(text = yearOption, color = Color.White) },
+                                        onClick = {
+                                            selectedPurchaseYear = yearOption
+                                            purchaseYearExpanded = false
+                                            purchaseDate = if (selectedPurchaseDay.isNotEmpty() && selectedPurchaseMonth.isNotEmpty() && selectedPurchaseYear.isNotEmpty()) {
+                                                "$selectedPurchaseYear-$selectedPurchaseMonth-$selectedPurchaseDay"
+                                            } else if (selectedPurchaseYear.isNotEmpty()) {
+                                                if (selectedPurchaseMonth.isNotEmpty()) "$selectedPurchaseYear-$selectedPurchaseMonth" else selectedPurchaseYear
+                                            } else ""
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = pricePaid,
+                        onValueChange = { pricePaid = it },
+                        label = { Text("Purchase Price / Paid") },
+                        placeholder = { Text("e.g. 29.99 €") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = getAppCorners(8.dp),
+                        singleLine = true,
+                        colors = synthwaveTextFieldColors()
+                    )
+
                     OutlinedTextField(
                         value = description,
                         onValueChange = { description = it },
@@ -787,43 +964,6 @@ fun AddEditGameScreen(
             }
             
             Spacer(modifier = Modifier.height(16.dp))
-            
-            val saveGame: () -> Unit = {
-                scope.launch {
-                    val targetId = existingGame?.id ?: gameId?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString()
-                    val game = (existingGame ?: Game(
-                        id = targetId,
-                        platformId = currentPlatformId,
-                        title = title,
-                        coverUri = coverUri,
-                        releaseDate = releaseDate,
-                        description = description,
-                        dateAdded = dateAdded
-                    )).copy(
-                        id = targetId,
-                        platformId = currentPlatformId,
-                        title = title,
-                        releaseDate = releaseDate,
-                        genre = genre,
-                        developer = developer,
-                        publisher = publisher,
-                        description = description,
-                        coverUri = coverUri,
-                        isFavorite = isFavorite,
-                        condition = condition,
-                    gameEdition = gameEdition,
-                        userRating = userRating,
-                        criticRating = criticRating,
-                        igdbId = currentIgdbId
-                    )
-                    if (isEditMode) {
-                        repository.updateGame(game)
-                    } else {
-                        repository.insertGame(game)
-                    }
-                    onSave(targetId)
-                }
-            }
 
             NeonButton(
                 text = stringResource(R.string.action_save_game),

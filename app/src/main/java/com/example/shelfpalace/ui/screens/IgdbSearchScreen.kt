@@ -256,7 +256,7 @@ private fun getPlatformNameById(id: Long): String? {
         9L -> "PS3"
         48L -> "PS4"
         167L -> "PS5"
-        38L -> "PSP"
+        38L -> "Playstation PSP"
         46L -> "Vita"
         18L -> "NES"
         19L -> "SNES"

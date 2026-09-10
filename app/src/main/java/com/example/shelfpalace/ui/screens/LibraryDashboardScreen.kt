@@ -37,6 +37,7 @@ import coil.compose.AsyncImage
 import com.example.shelfpalace.R
 import com.example.shelfpalace.data.Game
 import com.example.shelfpalace.data.GameRepository
+import com.example.shelfpalace.data.Manufacturer
 import com.example.shelfpalace.data.Movie
 import com.example.shelfpalace.data.MovieRepository
 import com.example.shelfpalace.data.Music
@@ -58,6 +59,7 @@ fun LibraryDashboardScreen(
     onMusicClick: (String) -> Unit,
     onGamesHeaderClick: (String) -> Unit,
     onManufacturerSelected: (String) -> Unit,
+    onPlatformSelected: (String) -> Unit = {},
     onMoviesHeaderClick: (String) -> Unit,
     onMovieFormatSelected: (String) -> Unit,
     onMusicHeaderClick: (String) -> Unit,
@@ -79,22 +81,29 @@ fun LibraryDashboardScreen(
 
     val filteredGames = remember(games, searchQuery, filterOption, disabledIds) {
         if (disabledIds.contains("media_games")) return@remember emptyList()
-        val baseList = if (filterOption == "Recently Added") games.reversed() else games
+        val validGames = games.filter { game ->
+            if (disabledIds.contains(game.platformId)) return@filter false
+            val platform = StaticData.platforms.find { it.id == game.platformId }
+            platform == null || !disabledIds.contains(platform.manufacturerId)
+        }
+        val baseList = if (filterOption == "Recently Added") validGames.sortedByDescending { it.dateAdded } else validGames.sortedBy { it.title }
         if (searchQuery.isEmpty()) baseList.take(10)
         else baseList.filter { it.title.contains(searchQuery, ignoreCase = true) }
     }
 
     val filteredMovies = remember(movies, searchQuery, filterOption, disabledIds) {
         if (disabledIds.contains("media_movies")) return@remember emptyList()
-        val baseList = if (filterOption == "Recently Added") movies.reversed() else movies
+        val validMovies = movies.filter { !disabledIds.contains(it.formatId) }
+        val baseList = if (filterOption == "Recently Added") validMovies.sortedByDescending { it.dateAdded } else validMovies.sortedBy { it.title }
         if (searchQuery.isEmpty()) baseList.take(10)
         else baseList.filter { it.title.contains(searchQuery, ignoreCase = true) }
     }
 
     val filteredMusic = remember(music, searchQuery, filterOption, disabledIds) {
         if (disabledIds.contains("media_music")) return@remember emptyList()
-        val baseList = if (filterOption == "Recently Added") music.reversed() else music
-        if (searchQuery.isEmpty()) music.take(10)
+        val validMusic = music.filter { !disabledIds.contains(it.formatId) }
+        val baseList = if (filterOption == "Recently Added") validMusic.sortedByDescending { it.dateAdded } else validMusic.sortedBy { it.title }
+        if (searchQuery.isEmpty()) baseList.take(10)
         else baseList.filter { it.title.contains(searchQuery, ignoreCase = true) || it.artist.contains(searchQuery, ignoreCase = true) }
     }
 
@@ -126,6 +135,7 @@ fun LibraryDashboardScreen(
                         CategoryTabs(
                             onGamesClick = { onGamesHeaderClick(searchQuery) },
                             onManufacturerSelected = onManufacturerSelected,
+                            onPlatformSelected = onPlatformSelected,
                             onMoviesClick = { onMoviesHeaderClick(searchQuery) },
                             onMovieFormatSelected = onMovieFormatSelected,
                             onMusicClick = { onMusicHeaderClick(searchQuery) },
@@ -188,7 +198,8 @@ fun LibraryDashboardScreen(
                         DashboardItemCard(
                             title = movie.title,
                             imageUri = movie.coverUri,
-                            tag = movie.formatId.uppercase()
+                            tag = PlatformUtils.getMovieFormatTag(movie.formatId),
+                            tagColor = MaterialTheme.colorScheme.secondary
                         ) { onMovieClick(movie.id) }
                     }
                 )
@@ -210,7 +221,8 @@ fun LibraryDashboardScreen(
                         DashboardItemCard(
                             title = album.title,
                             imageUri = album.coverUri,
-                            tag = album.formatId.uppercase(),
+                            tag = PlatformUtils.getMusicFormatTag(album.formatId),
+                            tagColor = MaterialTheme.colorScheme.secondary,
                             aspectRatio = 1f,
                             cardWidth = 160.dp
                         ) { onMusicClick(album.id) }
@@ -394,6 +406,7 @@ fun SearchAndFilterRow(
 fun CategoryTabs(
     onGamesClick: () -> Unit,
     onManufacturerSelected: (String) -> Unit,
+    onPlatformSelected: (String) -> Unit = {},
     onMoviesClick: () -> Unit,
     onMovieFormatSelected: (String) -> Unit,
     onMusicClick: () -> Unit,
@@ -401,6 +414,7 @@ fun CategoryTabs(
     disabledIds: Set<String> = emptySet()
 ) {
     var gamesMenuExpanded by remember { mutableStateOf(false) }
+    var selectedManufacturerForMenu by remember { mutableStateOf<Manufacturer?>(null) }
     var moviesMenuExpanded by remember { mutableStateOf(false) }
     var musicMenuExpanded by remember { mutableStateOf(false) }
 
@@ -483,57 +497,141 @@ fun CategoryTabs(
                         )
                     }
 
-                    val menuWidthDp = 118.dp
-                    val xOffsetDp = if (itemWidthDp > 0.dp) (itemWidthDp - menuWidthDp) / 2 else (-35).dp
+                    val menuWidthDp = if (category.name == "Games" && selectedManufacturerForMenu != null) 160.dp else 130.dp
+                    val xOffsetDp = if (itemWidthDp > 0.dp) (itemWidthDp - menuWidthDp) / 2 else (-40).dp
 
                     when (category.name) {
                         "Games" -> {
                             DropdownMenu(
                                 expanded = gamesMenuExpanded,
-                                onDismissRequest = { gamesMenuExpanded = false },
+                                onDismissRequest = { 
+                                    gamesMenuExpanded = false
+                                    selectedManufacturerForMenu = null
+                                },
                                 offset = DpOffset(xOffsetDp, 4.dp),
                                 containerColor = Color.Black.copy(alpha = 0.95f),
                                 modifier = Modifier
                                     .width(menuWidthDp)
                                     .border(1.dp, MaterialTheme.colorScheme.primary, getAppCorners(8.dp))
                             ) {
-                                manufacturers.forEach { manufacturer ->
+                                if (selectedManufacturerForMenu == null) {
+                                    manufacturers.forEach { manufacturer ->
+                                        DropdownMenuItem(
+                                            text = { 
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(
+                                                        text = manufacturer.name, 
+                                                        color = Color.White,
+                                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                                    )
+                                                    Text(
+                                                        text = "›",
+                                                        color = MaterialTheme.colorScheme.primary,
+                                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                                    )
+                                                }
+                                            },
+                                            modifier = Modifier.height(36.dp),
+                                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                                            onClick = {
+                                                selectedManufacturerForMenu = manufacturer
+                                            }
+                                        )
+                                    }
+                                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
                                     DropdownMenuItem(
                                         text = { 
                                             Text(
-                                                text = manufacturer.name, 
-                                                color = Color.White,
-                                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, fontSize = 14.sp),
+                                                text = "ALL MFRS.", 
+                                                color = MaterialTheme.colorScheme.primary,
+                                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Black, fontSize = 13.sp),
                                                 textAlign = TextAlign.Center,
                                                 modifier = Modifier.fillMaxWidth()
                                             ) 
                                         },
-                                        modifier = Modifier.height(34.dp),
+                                        modifier = Modifier.height(36.dp),
                                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
                                         onClick = {
                                             gamesMenuExpanded = false
-                                            onManufacturerSelected(manufacturer.id)
+                                            selectedManufacturerForMenu = null
+                                            onGamesClick()
+                                        }
+                                    )
+                                } else {
+                                    val currentMfr = selectedManufacturerForMenu!!
+                                    val platforms = StaticData.platforms.filter { 
+                                        it.manufacturerId == currentMfr.id && !disabledIds.contains(it.id) 
+                                    }
+
+                                    DropdownMenuItem(
+                                        text = { 
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Text(
+                                                    text = "‹", 
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                                )
+                                                Text(
+                                                    text = currentMfr.name, 
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Black, fontSize = 13.sp)
+                                                )
+                                            }
+                                        },
+                                        modifier = Modifier.height(36.dp),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                        onClick = {
+                                            selectedManufacturerForMenu = null
+                                        }
+                                    )
+                                    HorizontalDivider(color = Color.White.copy(alpha = 0.15f))
+
+                                    platforms.forEach { platform ->
+                                        DropdownMenuItem(
+                                            text = { 
+                                                Text(
+                                                    text = platform.name, 
+                                                    color = Color.White,
+                                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                                                ) 
+                                            },
+                                            modifier = Modifier.height(34.dp),
+                                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                                            onClick = {
+                                                gamesMenuExpanded = false
+                                                selectedManufacturerForMenu = null
+                                                onPlatformSelected(platform.id)
+                                            }
+                                        )
+                                    }
+
+                                    HorizontalDivider(color = Color.White.copy(alpha = 0.15f))
+                                    DropdownMenuItem(
+                                        text = { 
+                                            Text(
+                                                text = "ALL ${currentMfr.name}", 
+                                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 12.sp),
+                                                textAlign = TextAlign.Center,
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) 
+                                        },
+                                        modifier = Modifier.height(32.dp),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                        onClick = {
+                                            gamesMenuExpanded = false
+                                            selectedManufacturerForMenu = null
+                                            onManufacturerSelected(currentMfr.id)
                                         }
                                     )
                                 }
-                                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-                                DropdownMenuItem(
-                                    text = { 
-                                        Text(
-                                            text = "ALL MFRS.", 
-                                            color = MaterialTheme.colorScheme.primary,
-                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Black, fontSize = 14.sp),
-                                            textAlign = TextAlign.Center,
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) 
-                                    },
-                                    modifier = Modifier.height(34.dp),
-                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                                    onClick = {
-                                        gamesMenuExpanded = false
-                                        onGamesClick()
-                                    }
-                                )
                             }
                         }
                         "Movies" -> {
@@ -697,6 +795,7 @@ fun DashboardItemCard(
     title: String,
     imageUri: String,
     tag: String = "",
+    tagColor: Color = MaterialTheme.colorScheme.primary,
     aspectRatio: Float = 0.75f,
     cardWidth: Dp = 140.dp,
     onClick: () -> Unit
@@ -721,20 +820,22 @@ fun DashboardItemCard(
             )
             
             if (tag.isNotEmpty()) {
-                Box(
+                Surface(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .background(Color.Black.copy(alpha = 0.6f), getAppCorners(8.dp))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .padding(6.dp),
+                    color = tagColor.copy(alpha = 0.9f),
+                    contentColor = Color.Black,
+                    shape = getAppCorners(6.dp),
+                    border = BorderStroke(1.dp, Color.Black)
                 ) {
                     Text(
                         text = tag,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                         style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 10.sp
-                        ),
-                        color = Color.White
+                            fontWeight = FontWeight.Black,
+                            fontSize = 11.sp
+                        )
                     )
                 }
             }

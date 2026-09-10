@@ -15,7 +15,7 @@ object StaticData {
         Platform("sony_ps3", "sony", "Playstation 3"),
         Platform("sony_ps4", "sony", "Playstation 4"),
         Platform("sony_ps5", "sony", "Playstation 5"),
-        Platform("sony_psp", "sony", "PSP"),
+        Platform("sony_psp", "sony", "Playstation PSP"),
         Platform("sony_psvita", "sony", "PlayStation Vita"),
         
         // Nintendo

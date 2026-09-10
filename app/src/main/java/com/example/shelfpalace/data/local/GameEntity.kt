@@ -24,6 +24,8 @@ data class GameEntity(
     val status: String,
     val condition: String = "Sealed",
     val gameEdition: String = "Retail",
+    val purchaseDate: String = "",
+    val pricePaid: String = "",
     val notes: String
 )
 
@@ -46,6 +48,8 @@ fun GameEntity.toExternalModel() = Game(
     status = if (status.uppercase() == "BACKLOG") "Unplayed" else status,
     condition = condition,
     gameEdition = gameEdition,
+    purchaseDate = purchaseDate,
+    pricePaid = pricePaid,
     notes = notes
 )
 
@@ -68,5 +72,7 @@ fun Game.toEntity() = GameEntity(
     status = status,
     condition = condition,
     gameEdition = gameEdition,
+    purchaseDate = purchaseDate,
+    pricePaid = pricePaid,
     notes = notes
 )

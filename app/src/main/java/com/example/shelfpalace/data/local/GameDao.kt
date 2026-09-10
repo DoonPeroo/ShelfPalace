@@ -16,7 +16,7 @@ interface GameDao {
     @Query("SELECT * FROM games WHERE title LIKE '%' || :query || '%'")
     fun searchGames(query: String): Flow<List<GameEntity>>
 
-    @Query("SELECT * FROM games")
+    @Query("SELECT * FROM games ORDER BY dateAdded DESC")
     fun getAllGames(): Flow<List<GameEntity>>
 
     @Query("SELECT * FROM games WHERE id = :id")

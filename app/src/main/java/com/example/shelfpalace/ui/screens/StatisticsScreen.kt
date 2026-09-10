@@ -30,6 +30,7 @@ import com.example.shelfpalace.R
 import com.example.shelfpalace.data.GameRepository
 import com.example.shelfpalace.data.MovieRepository
 import com.example.shelfpalace.data.MusicRepository
+import com.example.shelfpalace.data.SettingsRepository
 import com.example.shelfpalace.data.StaticData
 import com.example.shelfpalace.ui.components.*
 
@@ -39,11 +40,35 @@ fun StatisticsScreen(
     gameRepository: GameRepository,
     movieRepository: MovieRepository,
     musicRepository: MusicRepository,
+    settingsRepository: SettingsRepository? = null,
     onBack: () -> Unit,
 ) {
-    val allGames by gameRepository.getAllGames().collectAsState(initial = emptyList())
-    val allMovies by movieRepository.getAllMovies().collectAsState(initial = emptyList())
-    val allMusic by musicRepository.getAllMusic().collectAsState(initial = emptyList())
+    val disabledIds by (settingsRepository?.disabledIds?.collectAsState(initial = emptySet()) ?: remember { mutableStateOf(emptySet()) })
+
+    val rawGames by gameRepository.getAllGames().collectAsState(initial = emptyList())
+    val rawMovies by movieRepository.getAllMovies().collectAsState(initial = emptyList())
+    val rawMusic by musicRepository.getAllMusic().collectAsState(initial = emptyList())
+
+    val allGames = remember(rawGames, disabledIds) {
+        if (disabledIds.contains("media_games")) emptyList()
+        else rawGames.filter { game ->
+            if (disabledIds.contains(game.platformId)) false
+            else {
+                val platform = StaticData.platforms.find { it.id == game.platformId }
+                platform == null || !disabledIds.contains(platform.manufacturerId)
+            }
+        }
+    }
+
+    val allMovies = remember(rawMovies, disabledIds) {
+        if (disabledIds.contains("media_movies")) emptyList()
+        else rawMovies.filter { !disabledIds.contains(it.formatId) }
+    }
+
+    val allMusic = remember(rawMusic, disabledIds) {
+        if (disabledIds.contains("media_music")) emptyList()
+        else rawMusic.filter { !disabledIds.contains(it.formatId) }
+    }
     
     val manufacturerStats = remember(allGames) {
         val counts = allGames.groupBy { game ->

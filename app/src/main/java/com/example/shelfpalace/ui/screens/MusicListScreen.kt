@@ -58,14 +58,17 @@ fun MusicListScreen(
     val focusRequester = remember { FocusRequester() }
 
     val currentSortOption by settingsRepository.sortOption.collectAsState(initial = SortOption.NAME)
+    val disabledIds by settingsRepository.disabledIds.collectAsState(initial = emptySet())
     val scope = rememberCoroutineScope()
 
     val musicList by remember(repository, formatId) { repository.getMusicForFormat(formatId) }
         .collectAsState(initial = emptyList())
 
-    val filteredMusic = remember(musicList, searchQuery, currentSortOption) {
-        val filtered = if (searchQuery.isEmpty()) musicList
-        else musicList.filter { it.title.matchesSearchQuery(searchQuery) || it.artist.matchesSearchQuery(searchQuery) }
+    val filteredMusic = remember(musicList, searchQuery, currentSortOption, disabledIds) {
+        if (disabledIds.contains("media_music")) return@remember emptyList()
+        val validList = musicList.filter { !disabledIds.contains(it.formatId) }
+        val filtered = if (searchQuery.isEmpty()) validList
+        else validList.filter { it.title.matchesSearchQuery(searchQuery) || it.artist.matchesSearchQuery(searchQuery) }
 
         when (currentSortOption) {
             SortOption.NAME -> filtered.sortedBy { it.title }

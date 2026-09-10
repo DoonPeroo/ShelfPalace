@@ -65,14 +65,21 @@ fun GameListScreen(
     val focusRequester = remember { FocusRequester() }
 
     val currentSortOption by settingsRepository.sortOption.collectAsState(initial = SortOption.NAME)
+    val disabledIds by settingsRepository.disabledIds.collectAsState(initial = emptySet())
     val scope = rememberCoroutineScope()
 
     val games by remember(repository, platformId) { repository.getGamesForPlatform(platformId) }
         .collectAsState(initial = emptyList())
 
-    val filteredGames = remember(games, searchQuery, currentSortOption) {
-        val filtered = if (searchQuery.isEmpty()) games
-        else games.filter { it.title.matchesSearchQuery(searchQuery) }
+    val filteredGames = remember(games, searchQuery, currentSortOption, disabledIds) {
+        if (disabledIds.contains("media_games")) return@remember emptyList()
+        val validList = games.filter { game ->
+            if (disabledIds.contains(game.platformId)) return@filter false
+            val platform = StaticData.platforms.find { it.id == game.platformId }
+            platform == null || !disabledIds.contains(platform.manufacturerId)
+        }
+        val filtered = if (searchQuery.isEmpty()) validList
+        else validList.filter { it.title.matchesSearchQuery(searchQuery) }
         
         when (currentSortOption) {
             SortOption.NAME -> filtered.sortedBy { it.title }

@@ -641,7 +641,8 @@ fun GameGridItem(
                             Surface(
                                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
                                 contentColor = Color.Black,
-                                shape = getAppCorners(6.dp)
+                                shape = getAppCorners(6.dp),
+                                border = BorderStroke(1.dp, Color.Black)
                             ) {
                                 Icon(
                                     painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_heart_filled),
@@ -656,7 +657,8 @@ fun GameGridItem(
                             Surface(
                                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
                                 contentColor = Color.Black,
-                                shape = getAppCorners(6.dp)
+                                shape = getAppCorners(6.dp),
+                                border = BorderStroke(1.dp, Color.Black)
                             ) {
                                 Text(
                                     text = shortPlatform,
@@ -708,17 +710,7 @@ fun MovieGridItem(
                     contentScale = ContentScale.Fit
                 )
 
-                val (formatLabel, formatIcon) = when(movie.formatId) {
-                    "vhs" -> "VHS" to Icons.Rounded.Videocam
-                    "laserdisc" -> "LD" to Icons.Rounded.DiscFull
-                    "vcd" -> "VCD" to Icons.Rounded.Album
-                    "dvd" -> "DVD" to Icons.Rounded.Album
-                    "bluray" -> "BD" to Icons.Rounded.Album
-                    "hddvd" -> "HD DVD" to Icons.Rounded.Album
-                    "bluray3d" -> "3D BD" to Icons.Rounded.Movie
-                    "bluray4k" -> "4K BD" to Icons.Rounded.HighQuality
-                    else -> "" to Icons.Rounded.Movie
-                }
+                val formatLabel = PlatformUtils.getMovieFormatTag(movie.formatId)
 
                 if (formatLabel.isNotEmpty() || (movie.isFavorite && showFavoriteBadge)) {
                     Row(
@@ -732,7 +724,8 @@ fun MovieGridItem(
                             Surface(
                                 color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f),
                                 contentColor = Color.Black,
-                                shape = getAppCorners(6.dp)
+                                shape = getAppCorners(6.dp),
+                                border = BorderStroke(1.dp, Color.Black)
                             ) {
                                 Icon(
                                     painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_heart_filled),
@@ -747,26 +740,17 @@ fun MovieGridItem(
                             Surface(
                                 color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f),
                                 contentColor = Color.Black,
-                                shape = getAppCorners(6.dp)
+                                shape = getAppCorners(6.dp),
+                                border = BorderStroke(1.dp, Color.Black)
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = formatIcon,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(12.dp)
+                                Text(
+                                    text = formatLabel,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 11.sp
                                     )
-                                    Spacer(modifier = Modifier.width(3.dp))
-                                    Text(
-                                        text = formatLabel,
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            fontWeight = FontWeight.Black,
-                                            fontSize = 11.sp
-                                        )
-                                    )
-                                }
+                                )
                             }
                         }
                     }
@@ -810,12 +794,7 @@ fun MusicGridItem(
                     contentScale = ContentScale.Crop
                 )
 
-                val (formatLabel, formatIcon) = when(music.formatId) {
-                    "cassette" -> "MC" to Icons.Rounded.SettingsBackupRestore // Closest to cassette? Or just Audio
-                    "cd" -> "CD" to Icons.Rounded.Album
-                    "vinyl" -> "LP" to Icons.Rounded.SettingsInputComponent // Closest to vinyl icon?
-                    else -> "" to Icons.Rounded.MusicNote
-                }
+                val formatLabel = PlatformUtils.getMusicFormatTag(music.formatId)
 
                 if (formatLabel.isNotEmpty() || (music.isFavorite && showFavoriteBadge)) {
                     Row(
@@ -829,7 +808,8 @@ fun MusicGridItem(
                             Surface(
                                 color = musicColor.copy(alpha = 0.9f),
                                 contentColor = Color.Black,
-                                shape = getAppCorners(6.dp)
+                                shape = getAppCorners(6.dp),
+                                border = BorderStroke(1.dp, Color.Black)
                             ) {
                                 Icon(
                                     painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_heart_filled),
@@ -844,26 +824,17 @@ fun MusicGridItem(
                             Surface(
                                 color = musicColor.copy(alpha = 0.9f),
                                 contentColor = Color.Black,
-                                shape = getAppCorners(6.dp)
+                                shape = getAppCorners(6.dp),
+                                border = BorderStroke(1.dp, Color.Black)
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = formatIcon,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(12.dp)
+                                Text(
+                                    text = formatLabel,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 11.sp
                                     )
-                                    Spacer(modifier = Modifier.width(3.dp))
-                                    Text(
-                                        text = formatLabel,
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            fontWeight = FontWeight.Black,
-                                            fontSize = 11.sp
-                                        )
-                                    )
-                                }
+                                )
                             }
                         }
                     }

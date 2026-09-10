@@ -435,20 +435,8 @@ fun MainApp(
                         igdbId = route.igdbId,
                         repository = repository,
                         onSave = { savedGameId ->
-                            if (isEditMode) {
-                                if (route.igdbId != null) {
-                                    navController.popBackStack<Destinations.IgdbSearch>(inclusive = true)
-                                    navController.popBackStack()
-                                } else {
-                                    navController.popBackStack() 
-                                }
-                            } else {
-                                if (route.igdbId != null) {
-                                    navController.popBackStack<Destinations.IgdbSearch>(inclusive = true)
-                                    navController.popBackStack()
-                                } else {
-                                    navController.popBackStack()
-                                }
+                            navController.popBackStack<Destinations.AddEditGame>(inclusive = true)
+                            if (!isEditMode) {
                                 navController.navigate(Destinations.GameDetail(savedGameId))
                             }
                         },
@@ -463,11 +451,7 @@ fun MainApp(
                         },
                         onBack = { navController.popBackStack() },
                         onHome = { 
-                            if (isEditMode) {
-                                navController.popBackStack()
-                            } else {
-                                navController.popBackStack(Destinations.LibraryDashboard, false)
-                            }
+                            navController.popBackStack<Destinations.AddEditGame>(inclusive = true)
                         }
                     )
                 }
@@ -660,16 +644,14 @@ fun MainApp(
                         musicId = route.musicId,
                         repository = musicRepository,
                         onSave = { savedMusicId ->
-                            if (isEditMode) {
-                                navController.popBackStack()
-                            } else {
-                                navController.popBackStack()
+                            navController.popBackStack<Destinations.AddEditMusic>(inclusive = true)
+                            if (!isEditMode) {
                                 navController.navigate(Destinations.MusicDetail(savedMusicId))
                             }
                         },
                         onBack = { navController.popBackStack() },
                         onHome = { 
-                            navController.popBackStack(Destinations.LibraryDashboard, false)
+                            navController.popBackStack<Destinations.AddEditMusic>(inclusive = true)
                         }
                     )
                 }

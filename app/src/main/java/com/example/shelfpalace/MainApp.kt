@@ -50,7 +50,7 @@ fun MainApp(
     movieRepository: MovieRepository,
     musicRepository: MusicRepository,
     settingsRepository: SettingsRepository,
-    navController: NavHostController = rememberNavController()
+    navController: NavHostController = rememberNavController(),
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -63,7 +63,7 @@ fun MainApp(
     var showMusicFormatSelection by remember { mutableStateOf(false) }
 
     val isRoot = currentDestination?.hasRoute<Destinations.LibraryDashboard>() == true
-    var backPressedTime by remember { mutableStateOf(0L) }
+    var backPressedTime by remember { mutableLongStateOf(0L) }
     val context = LocalContext.current
 
     BackHandler(enabled = isRoot) {

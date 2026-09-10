@@ -43,9 +43,8 @@ class MusicRepository(private val musicDao: MusicDao) {
         }
 
     suspend fun toggleFavorite(id: String) {
-        val music = musicDao.getMusicById(id)
-        if (music != null) {
-            musicDao.updateMusic(music.copy(isFavorite = !music.isFavorite))
+        musicDao.getMusicById(id)?.let {
+            musicDao.updateMusic(it.copy(isFavorite = !it.isFavorite))
         }
     }
 

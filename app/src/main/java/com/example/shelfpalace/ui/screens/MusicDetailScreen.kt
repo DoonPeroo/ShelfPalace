@@ -1,6 +1,5 @@
 package com.example.shelfpalace.ui.screens
 
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke

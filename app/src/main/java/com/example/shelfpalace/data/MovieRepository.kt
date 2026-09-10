@@ -49,9 +49,8 @@ class MovieRepository(private val movieDao: MovieDao) {
     }
 
     suspend fun toggleFavorite(id: String) {
-        val movie = movieDao.getMovieById(id)
-        if (movie != null) {
-            movieDao.updateMovie(movie.copy(isFavorite = !movie.isFavorite))
+        movieDao.getMovieById(id)?.let {
+            movieDao.updateMovie(it.copy(isFavorite = !it.isFavorite))
         }
     }
 

@@ -59,6 +59,7 @@ import com.example.shelfpalace.ui.theme.LocalCornerStyle
 import com.example.shelfpalace.ui.theme.SynthwaveDark
 import com.example.shelfpalace.ui.theme.SynthwaveLavender
 import com.example.shelfpalace.util.PlatformUtils
+import kotlin.math.abs
 
 @Composable
 fun getAppCorners(default: androidx.compose.ui.unit.Dp = 8.dp): RoundedCornerShape {
@@ -132,7 +133,7 @@ fun NeonButton(
     val pressedHighlight = Color(0xFF8A91AB) 
     
     // If the button color is white/grayish, make it pop with the highlight color when pressed
-    val isNeutral = Math.abs(color.red - color.green) < 0.1 && Math.abs(color.green - color.blue) < 0.1
+    val isNeutral = abs(color.red - color.green) < 0.1f && abs(color.green - color.blue) < 0.1f
     val highlightColor = if (isPressed && isNeutral) pressedHighlight else color
     
     val finalContainerColor = if (isPressed) highlightColor.copy(alpha = 0.15f) else containerColor
@@ -205,7 +206,7 @@ fun NeonIconButton(
     val isPressed by interactionSource.collectIsPressedAsState()
     
     val pressedHighlight = Color(0xFF8A91AB)
-    val isNeutral = Math.abs(color.red - color.green) < 0.1 && Math.abs(color.green - color.blue) < 0.1
+    val isNeutral = abs(color.red - color.green) < 0.1f && abs(color.green - color.blue) < 0.1f
     val highlightColor = if (isPressed && isNeutral) pressedHighlight else color
 
     val finalContainerColor = if (isPressed) highlightColor.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)

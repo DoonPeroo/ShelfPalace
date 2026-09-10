@@ -49,9 +49,8 @@ class GameRepository(private val gameDao: GameDao) {
     }
 
     suspend fun toggleFavorite(id: String) {
-        val game = gameDao.getGameById(id)
-        if (game != null) {
-            gameDao.updateGame(game.copy(isFavorite = !game.isFavorite))
+        gameDao.getGameById(id)?.let {
+            gameDao.updateGame(it.copy(isFavorite = !it.isFavorite))
         }
     }
 

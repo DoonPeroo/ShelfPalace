@@ -300,143 +300,21 @@ fun AddEditMovieScreen(
                         colors = synthwaveTextFieldColors()
                     )
                     
-                    Text(
-                        text = stringResource(R.string.label_release_date).uppercase(),
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+                    DateDropdownPicker(
+                        label = stringResource(R.string.label_release_date),
+                        selectedDay = selectedDay,
+                        selectedMonth = selectedMonth,
+                        selectedYear = selectedYear,
+                        onDateChanged = { d, m, y ->
+                            selectedDay = d
+                            selectedMonth = m
+                            selectedYear = y
+                            if (d.isNotEmpty() && m.isNotEmpty() && y.isNotEmpty()) {
+                                releaseDate = "$y-$m-$d"
+                                displayDate = DateUtils.formatDisplayDate(releaseDate)
+                            }
+                        }
                     )
-                    
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        // Day Dropdown
-                        ExposedDropdownMenuBox(
-                            expanded = dayExpanded,
-                            onExpandedChange = { dayExpanded = !dayExpanded },
-                            modifier = Modifier.weight(0.8f)
-                        ) {
-                            OutlinedTextField(
-                                value = selectedDay,
-                                onValueChange = {},
-                                readOnly = true,
-                                placeholder = { Text("DD", fontSize = 12.sp) },
-                                colors = synthwaveTextFieldColors(),
-                                modifier = Modifier
-                                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                                    .fillMaxWidth(),
-                                shape = getAppCorners(8.dp),
-                                singleLine = true
-                            )
-
-                            ExposedDropdownMenu(
-                                expanded = dayExpanded,
-                                onDismissRequest = { dayExpanded = false },
-                                containerColor = Color.Black.copy(alpha = 0.95f),
-                                modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.primary, getAppCorners(8.dp))
-                            ) {
-                                days.forEach { dayOption ->
-                                    DropdownMenuItem(
-                                        text = { Text(text = dayOption, color = Color.White) },
-                                        onClick = {
-                                            selectedDay = dayOption
-                                            dayExpanded = false
-                                            if (selectedDay.isNotEmpty() && selectedMonth.isNotEmpty() && selectedYear.isNotEmpty()) {
-                                                releaseDate = "$selectedYear-$selectedMonth-$selectedDay"
-                                                displayDate = DateUtils.formatDisplayDate(releaseDate)
-                                            }
-                                        }
-                                    )
-                                }
-                            }
-                        }
-
-                        // Month Dropdown
-                        ExposedDropdownMenuBox(
-                            expanded = monthExpanded,
-                            onExpandedChange = { monthExpanded = !monthExpanded },
-                            modifier = Modifier.weight(0.8f)
-                        ) {
-                            OutlinedTextField(
-                                value = selectedMonth,
-                                onValueChange = {},
-                                readOnly = true,
-                                placeholder = { Text("MM", fontSize = 12.sp) },
-                                colors = synthwaveTextFieldColors(),
-                                modifier = Modifier
-                                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                                    .fillMaxWidth(),
-                                shape = getAppCorners(8.dp),
-                                singleLine = true
-                            )
-
-                            ExposedDropdownMenu(
-                                expanded = monthExpanded,
-                                onDismissRequest = { monthExpanded = false },
-                                containerColor = Color.Black.copy(alpha = 0.95f),
-                                modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.primary, getAppCorners(8.dp))
-                            ) {
-                                months.forEach { monthOption ->
-                                    DropdownMenuItem(
-                                        text = { Text(text = monthOption, color = Color.White) },
-                                        onClick = {
-                                            selectedMonth = monthOption
-                                            monthExpanded = false
-                                            if (selectedDay.isNotEmpty() && selectedMonth.isNotEmpty() && selectedYear.isNotEmpty()) {
-                                                releaseDate = "$selectedYear-$selectedMonth-$selectedDay"
-                                                displayDate = DateUtils.formatDisplayDate(releaseDate)
-                                            }
-                                        }
-                                    )
-                                }
-                            }
-                        }
-
-                        // Year Dropdown
-                        ExposedDropdownMenuBox(
-                            expanded = yearExpanded,
-                            onExpandedChange = { yearExpanded = !yearExpanded },
-                            modifier = Modifier.weight(1.2f)
-                        ) {
-                            OutlinedTextField(
-                                value = selectedYear,
-                                onValueChange = {},
-                                readOnly = true,
-                                placeholder = { Text("YYYY", fontSize = 12.sp) },
-                                trailingIcon = {
-                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = yearExpanded)
-                                },
-                                colors = synthwaveTextFieldColors(),
-                                modifier = Modifier
-                                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                                    .fillMaxWidth(),
-                                shape = getAppCorners(8.dp),
-                                singleLine = true
-                            )
-
-                            ExposedDropdownMenu(
-                                expanded = yearExpanded,
-                                onDismissRequest = { yearExpanded = false },
-                                containerColor = Color.Black.copy(alpha = 0.95f),
-                                modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.primary, getAppCorners(8.dp))
-                            ) {
-                                years.forEach { yearOption ->
-                                    DropdownMenuItem(
-                                        text = { Text(text = yearOption, color = Color.White) },
-                                        onClick = {
-                                            selectedYear = yearOption
-                                            yearExpanded = false
-                                            if (selectedDay.isNotEmpty() && selectedMonth.isNotEmpty() && selectedYear.isNotEmpty()) {
-                                                releaseDate = "$selectedYear-$selectedMonth-$selectedDay"
-                                                displayDate = DateUtils.formatDisplayDate(releaseDate)
-                                            }
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
 
                     OutlinedTextField(
                         value = genre,
@@ -468,146 +346,24 @@ fun AddEditMovieScreen(
                         colors = synthwaveTextFieldColors()
                     )
 
-                    Text(
-                        text = "PURCHASE DATE",
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+                    DateDropdownPicker(
+                        label = "PURCHASE DATE",
+                        selectedDay = selectedPurchaseDay,
+                        selectedMonth = selectedPurchaseMonth,
+                        selectedYear = selectedPurchaseYear,
+                        onDateChanged = { d, m, y ->
+                            selectedPurchaseDay = d
+                            selectedPurchaseMonth = m
+                            selectedPurchaseYear = y
+                            if (d.isNotEmpty() && m.isNotEmpty() && y.isNotEmpty()) {
+                                purchaseDate = "$y-$m-$d"
+                            } else if (y.isNotEmpty()) {
+                                purchaseDate = if (m.isNotEmpty()) "$y-$m" else y
+                            } else {
+                                purchaseDate = ""
+                            }
+                        }
                     )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        // Day Dropdown
-                        ExposedDropdownMenuBox(
-                            expanded = purchaseDayExpanded,
-                            onExpandedChange = { purchaseDayExpanded = !purchaseDayExpanded },
-                            modifier = Modifier.weight(0.8f)
-                        ) {
-                            OutlinedTextField(
-                                value = selectedPurchaseDay,
-                                onValueChange = {},
-                                readOnly = true,
-                                placeholder = { Text("DD", fontSize = 12.sp) },
-                                colors = synthwaveTextFieldColors(),
-                                modifier = Modifier
-                                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                                    .fillMaxWidth(),
-                                shape = getAppCorners(8.dp),
-                                singleLine = true
-                            )
-
-                            ExposedDropdownMenu(
-                                expanded = purchaseDayExpanded,
-                                onDismissRequest = { purchaseDayExpanded = false },
-                                containerColor = Color.Black.copy(alpha = 0.95f),
-                                modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.primary, getAppCorners(8.dp))
-                            ) {
-                                days.forEach { dayOption ->
-                                    DropdownMenuItem(
-                                        text = { Text(text = dayOption, color = Color.White) },
-                                        onClick = {
-                                            selectedPurchaseDay = dayOption
-                                            purchaseDayExpanded = false
-                                            purchaseDate = if (selectedPurchaseDay.isNotEmpty() && selectedPurchaseMonth.isNotEmpty() && selectedPurchaseYear.isNotEmpty()) {
-                                                "$selectedPurchaseYear-$selectedPurchaseMonth-$selectedPurchaseDay"
-                                            } else if (selectedPurchaseYear.isNotEmpty()) {
-                                                if (selectedPurchaseMonth.isNotEmpty()) "$selectedPurchaseYear-$selectedPurchaseMonth" else selectedPurchaseYear
-                                            } else ""
-                                        }
-                                    )
-                                }
-                            }
-                        }
-
-                        // Month Dropdown
-                        ExposedDropdownMenuBox(
-                            expanded = purchaseMonthExpanded,
-                            onExpandedChange = { purchaseMonthExpanded = !purchaseMonthExpanded },
-                            modifier = Modifier.weight(0.8f)
-                        ) {
-                            OutlinedTextField(
-                                value = selectedPurchaseMonth,
-                                onValueChange = {},
-                                readOnly = true,
-                                placeholder = { Text("MM", fontSize = 12.sp) },
-                                colors = synthwaveTextFieldColors(),
-                                modifier = Modifier
-                                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                                    .fillMaxWidth(),
-                                shape = getAppCorners(8.dp),
-                                singleLine = true
-                            )
-
-                            ExposedDropdownMenu(
-                                expanded = purchaseMonthExpanded,
-                                onDismissRequest = { purchaseMonthExpanded = false },
-                                containerColor = Color.Black.copy(alpha = 0.95f),
-                                modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.primary, getAppCorners(8.dp))
-                            ) {
-                                months.forEach { monthOption ->
-                                    DropdownMenuItem(
-                                        text = { Text(text = monthOption, color = Color.White) },
-                                        onClick = {
-                                            selectedPurchaseMonth = monthOption
-                                            purchaseMonthExpanded = false
-                                            purchaseDate = if (selectedPurchaseDay.isNotEmpty() && selectedPurchaseMonth.isNotEmpty() && selectedPurchaseYear.isNotEmpty()) {
-                                                "$selectedPurchaseYear-$selectedPurchaseMonth-$selectedPurchaseDay"
-                                            } else if (selectedPurchaseYear.isNotEmpty()) {
-                                                if (selectedPurchaseMonth.isNotEmpty()) "$selectedPurchaseYear-$selectedPurchaseMonth" else selectedPurchaseYear
-                                            } else ""
-                                        }
-                                    )
-                                }
-                            }
-                        }
-
-                        // Year Dropdown
-                        ExposedDropdownMenuBox(
-                            expanded = purchaseYearExpanded,
-                            onExpandedChange = { purchaseYearExpanded = !purchaseYearExpanded },
-                            modifier = Modifier.weight(1.2f)
-                        ) {
-                            OutlinedTextField(
-                                value = selectedPurchaseYear,
-                                onValueChange = {},
-                                readOnly = true,
-                                placeholder = { Text("YYYY", fontSize = 12.sp) },
-                                trailingIcon = {
-                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = purchaseYearExpanded)
-                                },
-                                colors = synthwaveTextFieldColors(),
-                                modifier = Modifier
-                                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                                    .fillMaxWidth(),
-                                shape = getAppCorners(8.dp),
-                                singleLine = true
-                            )
-
-                            ExposedDropdownMenu(
-                                expanded = purchaseYearExpanded,
-                                onDismissRequest = { purchaseYearExpanded = false },
-                                containerColor = Color.Black.copy(alpha = 0.95f),
-                                modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.primary, getAppCorners(8.dp))
-                            ) {
-                                years.forEach { yearOption ->
-                                    DropdownMenuItem(
-                                        text = { Text(text = yearOption, color = Color.White) },
-                                        onClick = {
-                                            selectedPurchaseYear = yearOption
-                                            purchaseYearExpanded = false
-                                            purchaseDate = if (selectedPurchaseDay.isNotEmpty() && selectedPurchaseMonth.isNotEmpty() && selectedPurchaseYear.isNotEmpty()) {
-                                                "$selectedPurchaseYear-$selectedPurchaseMonth-$selectedPurchaseDay"
-                                            } else if (selectedPurchaseYear.isNotEmpty()) {
-                                                if (selectedPurchaseMonth.isNotEmpty()) "$selectedPurchaseYear-$selectedPurchaseMonth" else selectedPurchaseYear
-                                            } else ""
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
 
                     OutlinedTextField(
                         value = pricePaid,

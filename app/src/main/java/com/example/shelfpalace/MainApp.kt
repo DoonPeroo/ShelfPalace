@@ -790,13 +790,13 @@ fun MainApp(
 }
 
 @Composable
-fun MovieFormatSelectionDialog(
+fun MediaFormatSelectionDialog(
+    title: String = "SELECT FORMAT",
+    formats: List<Pair<String, String>>,
     onDismiss: () -> Unit,
     onBack: () -> Unit,
     onFormatSelected: (String) -> Unit
 ) {
-    val formats = StaticData.movieFormats
-    
     Dialog(onDismissRequest = onDismiss) {
         NeonCard(
             color = MaterialTheme.colorScheme.primary,
@@ -820,7 +820,7 @@ fun MovieFormatSelectionDialog(
                     )
                     
                     Text(
-                        text = "SELECT FORMAT",
+                        text = title,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f),
@@ -835,10 +835,10 @@ fun MovieFormatSelectionDialog(
                     modifier = Modifier.weight(1f, fill = false).fillMaxWidth(),
                     contentPadding = PaddingValues(bottom = 8.dp)
                 ) {
-                    items(formats) { format ->
+                    items(formats) { (id, name) ->
                         NeonButton(
-                            text = format.name,
-                            onClick = { onFormatSelected(format.id) },
+                            text = name,
+                            onClick = { onFormatSelected(id) },
                             modifier = Modifier.fillMaxWidth(),
                             height = 41.dp,
                             color = Color.White.copy(alpha = 0.6f),
@@ -861,73 +861,23 @@ fun MovieFormatSelectionDialog(
 }
 
 @Composable
-fun MusicFormatSelectionDialog(
-    onDismiss: () -> Unit,
-    onBack: () -> Unit,
-    onFormatSelected: (String) -> Unit
-) {
-    val formats = StaticData.musicFormats
-    
-    Dialog(onDismissRequest = onDismiss) {
-        NeonCard(
-            color = MaterialTheme.colorScheme.primary,
-            containerAlpha = 0.9f,
-            padding = 11.dp,
-            modifier = Modifier.width(262.dp)
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(9.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    NeonIconButton(
-                        iconPainter = painterResource(id = R.drawable.back),
-                        onClick = onBack,
-                        modifier = Modifier.size(28.dp),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    
-                    Text(
-                        text = "SELECT FORMAT",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.weight(1f),
-                        textAlign = TextAlign.Center
-                    )
-                    
-                    Spacer(modifier = Modifier.size(28.dp))
-                }
-                
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.weight(1f, fill = false).fillMaxWidth(),
-                    contentPadding = PaddingValues(bottom = 8.dp)
-                ) {
-                    items(formats) { format ->
-                        NeonButton(
-                            text = format.name,
-                            onClick = { onFormatSelected(format.id) },
-                            modifier = Modifier.fillMaxWidth(),
-                            height = 41.dp,
-                            color = Color.White.copy(alpha = 0.6f),
-                            containerColor = Color.White.copy(alpha = 0.08f)
-                        )
-                    }
-                }
-                
-                NeonButton(
-                    text = "CANCEL",
-                    onClick = onDismiss,
-                    modifier = Modifier.width(110.dp),
-                    height = 32.dp,
-                    color = Color.White.copy(alpha = 0.3f)
-                )
-            }
-        }
-    }
+fun MovieFormatSelectionDialog(onDismiss: () -> Unit, onBack: () -> Unit, onFormatSelected: (String) -> Unit) {
+    MediaFormatSelectionDialog(
+        formats = StaticData.movieFormats.map { it.id to it.name },
+        onDismiss = onDismiss,
+        onBack = onBack,
+        onFormatSelected = onFormatSelected
+    )
+}
+
+@Composable
+fun MusicFormatSelectionDialog(onDismiss: () -> Unit, onBack: () -> Unit, onFormatSelected: (String) -> Unit) {
+    MediaFormatSelectionDialog(
+        formats = StaticData.musicFormats.map { it.id to it.name },
+        onDismiss = onDismiss,
+        onBack = onBack,
+        onFormatSelected = onFormatSelected
+    )
 }
 
 @Composable

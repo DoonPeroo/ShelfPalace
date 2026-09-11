@@ -59,6 +59,7 @@ import com.example.shelfpalace.ui.theme.LocalCornerStyle
 import com.example.shelfpalace.ui.theme.SynthwaveDark
 import com.example.shelfpalace.ui.theme.SynthwaveLavender
 import com.example.shelfpalace.util.PlatformUtils
+import java.util.Calendar
 import kotlin.math.abs
 
 @Composable
@@ -533,6 +534,128 @@ fun NeonToggle(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FormDropdownField(
+    label: String,
+    selectedValue: String,
+    options: List<String>,
+    onOptionSelected: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    accentColor: Color = MaterialTheme.colorScheme.primary,
+    placeholder: String = ""
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = modifier
+    ) {
+        OutlinedTextField(
+            value = selectedValue.ifEmpty { placeholder },
+            onValueChange = {},
+            readOnly = true,
+            label = if (label.isNotEmpty()) { { Text(label) } } else null,
+            placeholder = if (placeholder.isNotEmpty()) { { Text(placeholder, fontSize = 12.sp) } } else null,
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            },
+            colors = synthwaveTextFieldColors(accentColor),
+            modifier = Modifier
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth(),
+            shape = getAppCorners(8.dp),
+            singleLine = true
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            containerColor = Color.Black.copy(alpha = 0.95f),
+            modifier = Modifier.border(1.dp, accentColor, getAppCorners(12.dp))
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = option,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = if (selectedValue == option || (selectedValue.isEmpty() && option == placeholder)) FontWeight.Bold else FontWeight.Normal,
+                            color = if (selectedValue == option || (selectedValue.isEmpty() && option == placeholder)) accentColor else Color.White
+                        )
+                    },
+                    onClick = {
+                        onOptionSelected(option)
+                        expanded = false
+                    },
+                    colors = MenuDefaults.itemColors(
+                        textColor = Color.White,
+                        trailingIconColor = accentColor
+                    )
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DateDropdownPicker(
+    label: String,
+    selectedDay: String,
+    selectedMonth: String,
+    selectedYear: String,
+    onDateChanged: (day: String, month: String, year: String) -> Unit,
+    accentColor: Color = MaterialTheme.colorScheme.primary
+) {
+    Column {
+        if (label.isNotEmpty()) {
+            Text(
+                text = label.uppercase(),
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                color = accentColor,
+                modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            FormDropdownField(
+                label = "",
+                selectedValue = selectedDay,
+                options = (1..31).map { it.toString().padStart(2, '0') },
+                onOptionSelected = { day -> onDateChanged(day, selectedMonth, selectedYear) },
+                modifier = Modifier.weight(0.8f),
+                accentColor = accentColor,
+                placeholder = "DD"
+            )
+            FormDropdownField(
+                label = "",
+                selectedValue = selectedMonth,
+                options = (1..12).map { it.toString().padStart(2, '0') },
+                onOptionSelected = { month -> onDateChanged(selectedDay, month, selectedYear) },
+                modifier = Modifier.weight(0.8f),
+                accentColor = accentColor,
+                placeholder = "MM"
+            )
+            FormDropdownField(
+                label = "",
+                selectedValue = selectedYear,
+                options = run {
+                    val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+                    (currentYear downTo 1950).map { it.toString() }
+                },
+                onOptionSelected = { year -> onDateChanged(selectedDay, selectedMonth, year) },
+                modifier = Modifier.weight(1.2f),
+                accentColor = accentColor,
+                placeholder = "YYYY"
+            )
+        }
+    }
+}
+
 @Composable
 fun NeonAlertDialog(
     onDismissRequest: () -> Unit,
@@ -603,17 +726,23 @@ fun NeonAlertDialog(
 }
 
 @Composable
-fun GameGridItem(
-    game: Game,
+fun MediaGridItemCard(
+    title: String,
+    coverUri: String,
+    tag: String,
+    isFavorite: Boolean,
     onClick: () -> Unit,
+    color: Color,
     aspectRatio: Float = 0.7f,
-    showFavoriteBadge: Boolean = true
+    showFavoriteBadge: Boolean = true,
+    subtitle: String? = null,
+    contentScale: ContentScale = ContentScale.Fit
 ) {
     NeonCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        color = MaterialTheme.colorScheme.primary
+        color = color
     ) {
         Column {
             Box(
@@ -623,14 +752,13 @@ fun GameGridItem(
                     .clip(getAppCorners(12.dp))
             ) {
                 AsyncImage(
-                    model = game.coverUri.ifEmpty { "https://via.placeholder.com/150x200?text=${game.title}" },
-                    contentDescription = game.title,
+                    model = coverUri.ifEmpty { "https://via.placeholder.com/150x200?text=$title" },
+                    contentDescription = title,
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
+                    contentScale = contentScale
                 )
-                
-                val shortPlatform = PlatformUtils.getShortPlatformName(game.platformId)
-                if (shortPlatform.isNotEmpty() || (game.isFavorite && showFavoriteBadge)) {
+
+                if (tag.isNotEmpty() || (isFavorite && showFavoriteBadge)) {
                     Row(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
@@ -638,15 +766,15 @@ fun GameGridItem(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (game.isFavorite && showFavoriteBadge) {
+                        if (isFavorite && showFavoriteBadge) {
                             Surface(
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                                color = color.copy(alpha = 0.9f),
                                 contentColor = Color.Black,
                                 shape = getAppCorners(6.dp),
                                 border = BorderStroke(1.dp, Color.Black)
                             ) {
                                 Icon(
-                                    painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_heart_filled),
+                                    painter = painterResource(id = R.drawable.ic_heart_filled),
                                     contentDescription = null,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp).size(16.dp),
                                     tint = Color(0xFFAD1457)
@@ -654,15 +782,15 @@ fun GameGridItem(
                             }
                         }
 
-                        if (shortPlatform.isNotEmpty()) {
+                        if (tag.isNotEmpty()) {
                             Surface(
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                                color = color.copy(alpha = 0.9f),
                                 contentColor = Color.Black,
                                 shape = getAppCorners(6.dp),
                                 border = BorderStroke(1.dp, Color.Black)
                             ) {
                                 Text(
-                                    text = shortPlatform,
+                                    text = tag,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.Black,
@@ -676,13 +804,40 @@ fun GameGridItem(
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = game.title,
+                text = title,
                 style = MaterialTheme.typography.labelLarge,
                 maxLines = 1,
                 color = Color.White
             )
+            if (!subtitle.isNullOrEmpty()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    color = Color.White.copy(alpha = 0.7f)
+                )
+            }
         }
     }
+}
+
+@Composable
+fun GameGridItem(
+    game: Game,
+    onClick: () -> Unit,
+    aspectRatio: Float = 0.7f,
+    showFavoriteBadge: Boolean = true
+) {
+    MediaGridItemCard(
+        title = game.title,
+        coverUri = game.coverUri,
+        tag = PlatformUtils.getShortPlatformName(game.platformId),
+        isFavorite = game.isFavorite,
+        onClick = onClick,
+        color = MaterialTheme.colorScheme.primary,
+        aspectRatio = aspectRatio,
+        showFavoriteBadge = showFavoriteBadge
+    )
 }
 
 @Composable
@@ -691,81 +846,16 @@ fun MovieGridItem(
     onClick: () -> Unit,
     showFavoriteBadge: Boolean = true
 ) {
-    NeonCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        color = MaterialTheme.colorScheme.secondary
-    ) {
-        Column {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(0.7f)
-                    .clip(getAppCorners(12.dp))
-            ) {
-                AsyncImage(
-                    model = movie.coverUri.ifEmpty { "https://via.placeholder.com/150x214?text=${movie.title}" },
-                    contentDescription = movie.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
-                )
-
-                val formatLabel = PlatformUtils.getMovieFormatTag(movie.formatId)
-
-                if (formatLabel.isNotEmpty() || (movie.isFavorite && showFavoriteBadge)) {
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (movie.isFavorite && showFavoriteBadge) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f),
-                                contentColor = Color.Black,
-                                shape = getAppCorners(6.dp),
-                                border = BorderStroke(1.dp, Color.Black)
-                            ) {
-                                Icon(
-                                    painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_heart_filled),
-                                    contentDescription = null,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp).size(16.dp),
-                                    tint = Color(0xFFAD1457)
-                                )
-                            }
-                        }
-
-                        if (formatLabel.isNotEmpty()) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f),
-                                contentColor = Color.Black,
-                                shape = getAppCorners(6.dp),
-                                border = BorderStroke(1.dp, Color.Black)
-                            ) {
-                                Text(
-                                    text = formatLabel,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = FontWeight.Black,
-                                        fontSize = 11.sp
-                                    )
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = movie.title,
-                style = MaterialTheme.typography.labelLarge,
-                maxLines = 1,
-                color = Color.White
-            )
-        }
-    }
+    MediaGridItemCard(
+        title = movie.title,
+        coverUri = movie.coverUri,
+        tag = PlatformUtils.getMovieFormatTag(movie.formatId),
+        isFavorite = movie.isFavorite,
+        onClick = onClick,
+        color = MaterialTheme.colorScheme.secondary,
+        aspectRatio = 0.7f,
+        showFavoriteBadge = showFavoriteBadge
+    )
 }
 
 @Composable
@@ -774,88 +864,18 @@ fun MusicGridItem(
     onClick: () -> Unit,
     showFavoriteBadge: Boolean = true
 ) {
-    val musicColor = MaterialTheme.colorScheme.secondary
-    NeonCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        color = musicColor
-    ) {
-        Column {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f) // Square for music covers usually
-                    .clip(getAppCorners(12.dp))
-            ) {
-                AsyncImage(
-                    model = music.coverUri.ifEmpty { "https://via.placeholder.com/200x200?text=${music.title}" },
-                    contentDescription = music.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-
-                val formatLabel = PlatformUtils.getMusicFormatTag(music.formatId)
-
-                if (formatLabel.isNotEmpty() || (music.isFavorite && showFavoriteBadge)) {
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (music.isFavorite && showFavoriteBadge) {
-                            Surface(
-                                color = musicColor.copy(alpha = 0.9f),
-                                contentColor = Color.Black,
-                                shape = getAppCorners(6.dp),
-                                border = BorderStroke(1.dp, Color.Black)
-                            ) {
-                                Icon(
-                                    painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_heart_filled),
-                                    contentDescription = null,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp).size(16.dp),
-                                    tint = Color(0xFFAD1457)
-                                )
-                            }
-                        }
-
-                        if (formatLabel.isNotEmpty()) {
-                            Surface(
-                                color = musicColor.copy(alpha = 0.9f),
-                                contentColor = Color.Black,
-                                shape = getAppCorners(6.dp),
-                                border = BorderStroke(1.dp, Color.Black)
-                            ) {
-                                Text(
-                                    text = formatLabel,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = FontWeight.Black,
-                                        fontSize = 11.sp
-                                    )
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = music.title,
-                style = MaterialTheme.typography.labelLarge,
-                maxLines = 1,
-                color = Color.White
-            )
-            Text(
-                text = music.artist,
-                style = MaterialTheme.typography.labelSmall,
-                maxLines = 1,
-                color = Color.White.copy(alpha = 0.7f)
-            )
-        }
-    }
+    MediaGridItemCard(
+        title = music.title,
+        subtitle = music.artist,
+        coverUri = music.coverUri,
+        tag = PlatformUtils.getMusicFormatTag(music.formatId),
+        isFavorite = music.isFavorite,
+        onClick = onClick,
+        color = MaterialTheme.colorScheme.secondary,
+        aspectRatio = 1f,
+        showFavoriteBadge = showFavoriteBadge,
+        contentScale = ContentScale.Crop
+    )
 }
 
 @Composable

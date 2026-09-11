@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import com.example.shelfpalace.ui.components.getAppCorners
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,7 +32,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.shelfpalace.R
-import com.example.shelfpalace.data.Game
 import com.example.shelfpalace.data.GameRepository
 import com.example.shelfpalace.data.Manufacturer
 import com.example.shelfpalace.data.Movie
@@ -428,9 +428,6 @@ fun CategoryTabs(
         }
         if (!disabledIds.contains("media_music")) {
             list.add(CategoryItem(name = "Music", iconResId = R.drawable.music) { musicMenuExpanded = true })
-        }
-        if (!disabledIds.contains("media_more")) {
-            list.add(CategoryItem("More", Icons.Rounded.MoreHoriz) { /* Handle More */ })
         }
         list
     }

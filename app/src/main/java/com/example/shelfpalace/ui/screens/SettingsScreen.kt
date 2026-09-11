@@ -469,23 +469,6 @@ fun SettingsScreen(
             }
 
             item {
-                CompactSectionHeader(text = "More Library Filters", color = lavender)
-                NeonCard(
-                    color = lavender,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    val isMoreEnabled = !disabledIds.contains("media_more")
-                    SettingsToggleRow(
-                        label = "Enable More Category",
-                        isEnabled = isMoreEnabled,
-                        onToggle = { checked ->
-                            scope.launch { repository.toggleVisibility("media_more", checked) }
-                        }
-                    )
-                }
-            }
-
-            item {
                 Spacer(modifier = Modifier.height(4.dp))
                 CompactSectionHeader(text = "Data Management", color = accentColor)
                 NeonCard(

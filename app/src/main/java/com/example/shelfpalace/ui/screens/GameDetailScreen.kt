@@ -73,6 +73,8 @@ fun GameDetailScreen(
     val game by repository.getGameStream(gameId).collectAsStateWithLifecycle(initialValue = null)
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     var selectedImageIndex by remember { mutableStateOf<Int?>(null) }
+    var selectedVideoId by remember { mutableStateOf<String?>(null) }
+    var selectedVideoTitle by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val accentColor = MaterialTheme.colorScheme.primary
     val deepPurple = Color(0xFF9C27B0)
@@ -318,7 +320,11 @@ fun GameDetailScreen(
                                 screenshots = screenshots, 
                                 videos = videos,
                                 isLoading = isMediaLoading, 
-                                onImageClick = { selectedImageIndex = it }
+                                onImageClick = { selectedImageIndex = it },
+                                onVideoClick = { id, title ->
+                                    selectedVideoId = id
+                                    selectedVideoTitle = title
+                                }
                             )
                             2 -> GameMyDetailsTab(
                                 game = currentGame,
@@ -381,6 +387,15 @@ fun GameDetailScreen(
             screenshots = screenshots,
             initialIndex = index,
             onDismiss = { selectedImageIndex = null },
+            accentColor = accentColor
+        )
+    }
+
+    selectedVideoId?.let { videoId ->
+        VideoPlayerDialog(
+            videoId = videoId,
+            videoTitle = selectedVideoTitle,
+            onDismissRequest = { selectedVideoId = null },
             accentColor = accentColor
         )
     }
@@ -467,7 +482,8 @@ fun GameMediaTab(
     screenshots: List<String>,
     videos: List<IgdbVideo>,
     isLoading: Boolean,
-    onImageClick: (Int) -> Unit
+    onImageClick: (Int) -> Unit,
+    onVideoClick: (String, String) -> Unit
 ) {
     val isDualScreen = platformId == "nintendo_ds" || platformId == "nintendo_3ds"
     val context = LocalContext.current
@@ -579,12 +595,7 @@ fun GameMediaTab(
                         modifier = Modifier
                             .width(220.dp)
                             .clickable {
-                                try {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=$videoId"))
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                }
+                                onVideoClick(videoId, videoTitle)
                             }
                     ) {
                         Box(
@@ -753,6 +764,231 @@ fun GameMyDetailsTab(
                 valueColor = if (game.notes.isEmpty()) Color.White.copy(alpha = 0.4f) else Color.White,
                 onClick = onNotesClick
             )
+        }
+    }
+}
+
+@Composable
+fun VideoPlayerDialog(
+    videoId: String,
+    videoTitle: String,
+    onDismissRequest: () -> Unit,
+    accentColor: Color
+) {
+    var isFullscreen by remember { mutableStateOf(false) }
+    var customView by remember { mutableStateOf<View?>(null) }
+    var customViewCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
+
+    if (customView != null) {
+        Dialog(
+            onDismissRequest = {
+                try {
+                    customViewCallback?.onCustomViewHidden()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                customView = null
+                customViewCallback = null
+            },
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+            ) {
+                AndroidView(
+                    factory = { _ ->
+                        (customView?.parent as? ViewGroup)?.removeView(customView)
+                        customView!!
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+    }
+
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.95f))
+                .padding(if (isFullscreen) 0.dp else 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = if (isFullscreen) Modifier.fillMaxSize() else Modifier.fillMaxWidth().wrapContentHeight(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Header Bar
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (isFullscreen) {
+                                Modifier
+                                    .statusBarsPadding()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                            } else {
+                                Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
+                            }
+                        ),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = videoTitle,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    NeonIconButton(
+                        icon = if (isFullscreen) Icons.Rounded.FullscreenExit else Icons.Rounded.Fullscreen,
+                        onClick = { isFullscreen = !isFullscreen },
+                        color = accentColor,
+                        size = 36.dp
+                    )
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    NeonIconButton(
+                        iconPainter = painterResource(id = R.drawable.ic_close),
+                        onClick = onDismissRequest,
+                        color = accentColor,
+                        size = 36.dp
+                    )
+                }
+
+                if (!isFullscreen) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                val context = LocalContext.current
+                val webView = remember(videoId) {
+                    WebView(context).apply {
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                        setLayerType(View.LAYER_TYPE_HARDWARE, null)
+                        settings.javaScriptEnabled = true
+                        settings.domStorageEnabled = true
+                        settings.allowFileAccess = true
+                        settings.allowContentAccess = true
+                        settings.mediaPlaybackRequiresUserGesture = false
+                        settings.useWideViewPort = true
+                        settings.loadWithOverviewMode = true
+                        settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                        settings.userAgentString = "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+                        webChromeClient = object : WebChromeClient() {
+                            override fun getDefaultVideoPoster(): Bitmap {
+                                return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+                            }
+
+                            override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
+                                super.onShowCustomView(view, callback)
+                                customView = view
+                                customViewCallback = callback
+                            }
+
+                            override fun onHideCustomView() {
+                                super.onHideCustomView()
+                                try {
+                                    customViewCallback?.onCustomViewHidden()
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                                customView = null
+                                customViewCallback = null
+                            }
+                        }
+                        webViewClient = object : WebViewClient() {
+                            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                                val url = request?.url?.toString() ?: return false
+                                if (url.startsWith("intent:") || url.startsWith("vnd.youtube:") || url.startsWith("market:")) {
+                                    return true
+                                }
+                                return false
+                            }
+                        }
+
+                        val htmlData = """
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                            <style>
+                              * { margin: 0; padding: 0; box-sizing: border-box; }
+                              html, body { width: 100%; height: 100%; background-color: #000000; overflow: hidden; }
+                              .video-container { position: relative; width: 100%; height: 100%; }
+                              iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+                            </style>
+                            </head>
+                            <body>
+                              <div class="video-container">
+                                <iframe id="player"
+                                        src="https://www.youtube.com/embed/$videoId?autoplay=1&playsinline=1&controls=1&enablejsapi=1&origin=https://www.youtube.com&widget_referrer=https://www.youtube.com"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                        allowfullscreen></iframe>
+                              </div>
+                            </body>
+                            </html>
+                        """.trimIndent()
+
+                        loadDataWithBaseURL("https://www.youtube.com", htmlData, "text/html", "UTF-8", null)
+                    }
+                }
+
+                NeonCard(
+                    modifier = if (isFullscreen) Modifier.fillMaxWidth().weight(1f) else Modifier.fillMaxWidth().aspectRatio(16f / 9f),
+                    color = accentColor,
+                    padding = 0.dp
+                ) {
+                    AndroidView(
+                        factory = { webView },
+                        update = { view ->
+                            view.requestLayout()
+                            view.invalidate()
+                        },
+                        onRelease = { view ->
+                            view.stopLoading()
+                            view.loadUrl("about:blank")
+                            view.destroy()
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                if (!isFullscreen) {
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    val context = LocalContext.current
+                    NeonButton(
+                        text = "OPEN IN YOUTUBE",
+                        icon = Icons.AutoMirrored.Rounded.OpenInNew,
+                        onClick = {
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=$videoId"))
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        color = accentColor,
+                        height = 42.dp
+                    )
+                }
+            }
         }
     }
 }

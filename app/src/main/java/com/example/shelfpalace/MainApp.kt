@@ -720,6 +720,7 @@ fun MainApp(
 
     if (showAddDialog) {
         AddChoiceDialog(
+            settingsRepository = settingsRepository,
             onDismiss = { showAddDialog = false },
             onAddGame = {
                 showAddDialog = false
@@ -759,6 +760,7 @@ fun MainApp(
 
     if (showMovieFormatSelection) {
         MovieFormatSelectionDialog(
+            settingsRepository = settingsRepository,
             onDismiss = { showMovieFormatSelection = false },
             onBack = {
                 showMovieFormatSelection = false
@@ -773,6 +775,7 @@ fun MainApp(
 
     if (showMusicFormatSelection) {
         MusicFormatSelectionDialog(
+            settingsRepository = settingsRepository,
             onDismiss = { showMusicFormatSelection = false },
             onBack = {
                 showMusicFormatSelection = false
@@ -850,8 +853,7 @@ fun MediaFormatSelectionDialog(
                     onClick = onDismiss,
                     modifier = Modifier.width(110.dp),
                     height = 32.dp,
-                    color = Color.White.copy(alpha = 0.6f),
-                    containerColor = Color.White.copy(alpha = 0.08f)
+                    color = Color.White.copy(alpha = 0.3f)
                 )
             }
         }
@@ -859,9 +861,20 @@ fun MediaFormatSelectionDialog(
 }
 
 @Composable
-fun MovieFormatSelectionDialog(onDismiss: () -> Unit, onBack: () -> Unit, onFormatSelected: (String) -> Unit) {
+fun MovieFormatSelectionDialog(
+    settingsRepository: SettingsRepository,
+    onDismiss: () -> Unit, 
+    onBack: () -> Unit, 
+    onFormatSelected: (String) -> Unit
+) {
+    val disabledIds by settingsRepository.disabledIds.collectAsState(initial = emptySet())
+    val activeFormats = remember(disabledIds) {
+        StaticData.movieFormats
+            .filter { !disabledIds.contains(it.id) }
+            .map { it.id to it.name }
+    }
     MediaFormatSelectionDialog(
-        formats = StaticData.movieFormats.map { it.id to it.name },
+        formats = activeFormats,
         onDismiss = onDismiss,
         onBack = onBack,
         onFormatSelected = onFormatSelected
@@ -869,9 +882,20 @@ fun MovieFormatSelectionDialog(onDismiss: () -> Unit, onBack: () -> Unit, onForm
 }
 
 @Composable
-fun MusicFormatSelectionDialog(onDismiss: () -> Unit, onBack: () -> Unit, onFormatSelected: (String) -> Unit) {
+fun MusicFormatSelectionDialog(
+    settingsRepository: SettingsRepository,
+    onDismiss: () -> Unit, 
+    onBack: () -> Unit, 
+    onFormatSelected: (String) -> Unit
+) {
+    val disabledIds by settingsRepository.disabledIds.collectAsState(initial = emptySet())
+    val activeFormats = remember(disabledIds) {
+        StaticData.musicFormats
+            .filter { !disabledIds.contains(it.id) }
+            .map { it.id to it.name }
+    }
     MediaFormatSelectionDialog(
-        formats = StaticData.musicFormats.map { it.id to it.name },
+        formats = activeFormats,
         onDismiss = onDismiss,
         onBack = onBack,
         onFormatSelected = onFormatSelected
@@ -975,11 +999,17 @@ fun PlatformSelectionDialog(
 
 @Composable
 fun AddChoiceDialog(
+    settingsRepository: SettingsRepository,
     onDismiss: () -> Unit,
     onAddGame: () -> Unit,
     onAddMovie: () -> Unit,
     onAddMusic: () -> Unit
 ) {
+    val disabledIds by settingsRepository.disabledIds.collectAsState(initial = emptySet())
+    val isGamesEnabled = !disabledIds.contains("media_games")
+    val isMoviesEnabled = !disabledIds.contains("media_movies")
+    val isMusicEnabled = !disabledIds.contains("media_music")
+
     Dialog(onDismissRequest = onDismiss) {
         NeonCard(
             color = MaterialTheme.colorScheme.primary,
@@ -999,32 +1029,38 @@ fun AddChoiceDialog(
                     textAlign = TextAlign.Center
                 )
                 
-                NeonButton(
-                    text = "NEW GAME",
-                    onClick = onAddGame,
-                    modifier = Modifier.fillMaxWidth(),
-                    height = 41.dp,
-                    color = Color.White.copy(alpha = 0.6f),
-                    containerColor = Color.White.copy(alpha = 0.08f)
-                )
+                if (isGamesEnabled) {
+                    NeonButton(
+                        text = "NEW GAME",
+                        onClick = onAddGame,
+                        modifier = Modifier.fillMaxWidth(),
+                        height = 41.dp,
+                        color = Color.White.copy(alpha = 0.6f),
+                        containerColor = Color.White.copy(alpha = 0.08f)
+                    )
+                }
                 
-                NeonButton(
-                    text = "NEW MOVIE",
-                    onClick = onAddMovie,
-                    modifier = Modifier.fillMaxWidth(),
-                    height = 41.dp,
-                    color = Color.White.copy(alpha = 0.6f),
-                    containerColor = Color.White.copy(alpha = 0.08f)
-                )
+                if (isMoviesEnabled) {
+                    NeonButton(
+                        text = "NEW MOVIE",
+                        onClick = onAddMovie,
+                        modifier = Modifier.fillMaxWidth(),
+                        height = 41.dp,
+                        color = Color.White.copy(alpha = 0.6f),
+                        containerColor = Color.White.copy(alpha = 0.08f)
+                    )
+                }
                 
-                NeonButton(
-                    text = "NEW MUSIC",
-                    onClick = onAddMusic,
-                    modifier = Modifier.fillMaxWidth(),
-                    height = 41.dp,
-                    color = Color.White.copy(alpha = 0.6f),
-                    containerColor = Color.White.copy(alpha = 0.08f)
-                )
+                if (isMusicEnabled) {
+                    NeonButton(
+                        text = "NEW MUSIC",
+                        onClick = onAddMusic,
+                        modifier = Modifier.fillMaxWidth(),
+                        height = 41.dp,
+                        color = Color.White.copy(alpha = 0.6f),
+                        containerColor = Color.White.copy(alpha = 0.08f)
+                    )
+                }
                 
                 NeonButton(
                     text = "CANCEL",

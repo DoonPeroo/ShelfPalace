@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -134,62 +135,59 @@ fun GameListScreen(
                     }
                 }
             } else {
-                Box(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
                         .height(56.dp)
-                        .padding(horizontal = 12.dp),
-                    contentAlignment = Alignment.Center
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
+                    NeonBackButton(
+                        onClick = onBack,
+                        color = accentColor
+                    )
+
+                    Spacer(modifier = Modifier.width(4.dp))
+
                     val headerCorners = 12.dp
-                    Box(
-                        modifier = Modifier
-                            .padding(end = 60.dp)
-                            .height(44.dp)
-                            .background(Color.Black.copy(alpha = 0.3f), getAppCorners(headerCorners))
-                            .border(1.dp, accentColor.copy(alpha = 0.8f), getAppCorners(headerCorners))
-                            .padding(horizontal = 16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            if (platformId != "all") {
-                                Text(
-                                    text = "GAMES",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        letterSpacing = 1.sp,
-                                        fontSize = 8.sp,
-                                        color = accentColor.copy(alpha = 0.7f)
-                                    ),
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                            Text(
-                                text = platformName.uppercase(),
-                                style = MaterialTheme.typography.titleSmall.copy(
-                                    fontWeight = FontWeight.Black,
-                                    letterSpacing = 1.sp,
-                                    fontSize = 14.sp,
-                                    color = accentColor
-                                ),
-                                textAlign = TextAlign.Center
-                            )
-                        }
+                    val headerTitle = platformName.uppercase()
+                    val dynamicFontSize = when {
+                        headerTitle.length >= 22 -> 10.5.sp
+                        headerTitle.length >= 17 -> 11.5.sp
+                        headerTitle.length >= 14 -> 12.5.sp
+                        headerTitle.length >= 10 -> 13.sp
+                        else -> 13.sp
                     }
 
-                    Box(modifier = Modifier.align(Alignment.CenterStart)) {
-                        NeonBackButton(
-                            onClick = onBack,
-                            color = accentColor
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(42.dp)
+                            .background(Color.Black.copy(alpha = 0.3f), getAppCorners(headerCorners))
+                            .border(1.dp, accentColor.copy(alpha = 0.8f), getAppCorners(headerCorners))
+                            .padding(horizontal = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = headerTitle,
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 1.sp,
+                                fontSize = dynamicFontSize,
+                                color = accentColor
+                            ),
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center
                         )
                     }
 
+                    Spacer(modifier = Modifier.width(4.dp))
+
                     Row(
-                        modifier = Modifier.align(Alignment.CenterEnd),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {

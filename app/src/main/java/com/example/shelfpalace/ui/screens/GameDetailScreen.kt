@@ -35,6 +35,8 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
+import android.content.res.Configuration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -204,7 +206,7 @@ fun GameDetailScreen(
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         // Favorite
                         NeonIconButton(
@@ -775,7 +777,11 @@ fun VideoPlayerDialog(
     onDismissRequest: () -> Unit,
     accentColor: Color
 ) {
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     var isFullscreen by remember { mutableStateOf(false) }
+    val effectiveFullscreen = isFullscreen || isLandscape
+
     var customView by remember { mutableStateOf<View?>(null) }
     var customViewCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
 
@@ -796,6 +802,8 @@ fun VideoPlayerDialog(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black)
+                    .statusBarsPadding()
+                    .padding(top = if (isLandscape) 0.dp else 12.dp)
             ) {
                 AndroidView(
                     factory = { _ ->
@@ -816,11 +824,11 @@ fun VideoPlayerDialog(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.95f))
-                .padding(if (isFullscreen) 0.dp else 16.dp),
+                .padding(if (effectiveFullscreen) 0.dp else 16.dp),
             contentAlignment = Alignment.Center
         ) {
             Column(
-                modifier = if (isFullscreen) Modifier.fillMaxSize() else Modifier.fillMaxWidth().wrapContentHeight(),
+                modifier = if (effectiveFullscreen) Modifier.fillMaxSize() else Modifier.fillMaxWidth().wrapContentHeight(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Header Bar
@@ -828,10 +836,16 @@ fun VideoPlayerDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .then(
-                            if (isFullscreen) {
-                                Modifier
-                                    .statusBarsPadding()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                            if (effectiveFullscreen) {
+                                if (isLandscape) {
+                                    Modifier
+                                        .statusBarsPadding()
+                                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                                } else {
+                                    Modifier
+                                        .statusBarsPadding()
+                                        .padding(top = 16.dp, bottom = 8.dp, start = 16.dp, end = 16.dp)
+                                }
                             } else {
                                 Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
                             }
@@ -868,7 +882,7 @@ fun VideoPlayerDialog(
                     )
                 }
 
-                if (!isFullscreen) {
+                if (!effectiveFullscreen) {
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
@@ -888,7 +902,7 @@ fun VideoPlayerDialog(
                         settings.useWideViewPort = true
                         settings.loadWithOverviewMode = true
                         settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                        settings.userAgentString = "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+                        settings.userAgentString = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
                         webChromeClient = object : WebChromeClient() {
                             override fun getDefaultVideoPoster(): Bitmap {
                                 return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
@@ -898,6 +912,9 @@ fun VideoPlayerDialog(
                                 super.onShowCustomView(view, callback)
                                 customView = view
                                 customViewCallback = callback
+                                postDelayed({
+                                    evaluateJavascript("javascript:(function() { var p = document.getElementById('player'); if (p && p.contentWindow) { p.contentWindow.postMessage('{\"event\":\"command\",\"func\":\"playVideo\",\"args\":\"\"}', '*'); } })()", null)
+                                }, 150)
                             }
 
                             override fun onHideCustomView() {
@@ -909,6 +926,9 @@ fun VideoPlayerDialog(
                                 }
                                 customView = null
                                 customViewCallback = null
+                                postDelayed({
+                                    evaluateJavascript("javascript:(function() { var p = document.getElementById('player'); if (p && p.contentWindow) { p.contentWindow.postMessage('{\"event\":\"command\",\"func\":\"playVideo\",\"args\":\"\"}', '*'); } })()", null)
+                                }, 150)
                             }
                         }
                         webViewClient = object : WebViewClient() {
@@ -936,7 +956,7 @@ fun VideoPlayerDialog(
                             <body>
                               <div class="video-container">
                                 <iframe id="player"
-                                        src="https://www.youtube.com/embed/$videoId?autoplay=1&playsinline=1&controls=1&enablejsapi=1&origin=https://www.youtube.com&widget_referrer=https://www.youtube.com"
+                                        src="https://www.youtube-nocookie.com/embed/$videoId?autoplay=1&playsinline=1&controls=1&enablejsapi=1"
                                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                         allowfullscreen></iframe>
                               </div>
@@ -944,12 +964,12 @@ fun VideoPlayerDialog(
                             </html>
                         """.trimIndent()
 
-                        loadDataWithBaseURL("https://www.youtube.com", htmlData, "text/html", "UTF-8", null)
+                        loadDataWithBaseURL("https://www.youtube-nocookie.com", htmlData, "text/html", "UTF-8", null)
                     }
                 }
 
                 NeonCard(
-                    modifier = if (isFullscreen) Modifier.fillMaxWidth().weight(1f) else Modifier.fillMaxWidth().aspectRatio(16f / 9f),
+                    modifier = if (effectiveFullscreen) Modifier.fillMaxWidth().weight(1f) else Modifier.fillMaxWidth().aspectRatio(16f / 9f),
                     color = accentColor,
                     padding = 0.dp
                 ) {
@@ -958,6 +978,9 @@ fun VideoPlayerDialog(
                         update = { view ->
                             view.requestLayout()
                             view.invalidate()
+                            view.postDelayed({
+                                view.evaluateJavascript("javascript:(function() { var p = document.getElementById('player'); if (p && p.contentWindow) { p.contentWindow.postMessage('{\"event\":\"command\",\"func\":\"playVideo\",\"args\":\"\"}', '*'); } })()", null)
+                            }, 150)
                         },
                         onRelease = { view ->
                             view.stopLoading()
@@ -968,7 +991,7 @@ fun VideoPlayerDialog(
                     )
                 }
 
-                if (!isFullscreen) {
+                if (!effectiveFullscreen) {
                     Spacer(modifier = Modifier.height(12.dp))
 
                     val context = LocalContext.current

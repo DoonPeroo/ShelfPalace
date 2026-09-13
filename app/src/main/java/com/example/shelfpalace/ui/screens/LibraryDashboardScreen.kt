@@ -22,6 +22,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
+import android.content.res.Configuration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -69,6 +71,9 @@ fun LibraryDashboardScreen(
     val movies by movieRepository.getAllMovies().collectAsStateWithLifecycle(initialValue = emptyList())
     val music by musicRepository.getAllMusic().collectAsStateWithLifecycle(initialValue = emptyList())
 
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
     var searchQuery by rememberSaveable { mutableStateOf("") }
 
     BackHandler(enabled = searchQuery.isNotEmpty()) {
@@ -109,13 +114,13 @@ fun LibraryDashboardScreen(
         // Sticky Top Area (Header + Search + Categories)
         Column(
             modifier = Modifier
-                .statusBarsPadding()
+                .then(if (isLandscape) Modifier.padding(top = 0.dp) else Modifier.statusBarsPadding())
         ) {
             // 1. Header
-            LibraryHeader()
+            LibraryHeader(isLandscape = isLandscape)
             
             // 2. Search & Filter & Category Tabs (Shifted Upward)
-            Box(modifier = Modifier.offset(y = (-24).dp)) {
+            Box(modifier = Modifier.offset(y = if (isLandscape) (-8).dp else (-28).dp)) {
                 Column {
                     SearchAndFilterRow(
                         searchQuery = searchQuery,
@@ -125,7 +130,7 @@ fun LibraryDashboardScreen(
                     )
 
                     if (searchQuery.isEmpty()) {
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(if (isLandscape) 2.dp else 6.dp))
 
                         // 3. Category Tabs (Now Sticky)
                         CategoryTabs(
@@ -147,14 +152,10 @@ fun LibraryDashboardScreen(
         Column(
             modifier = Modifier
                 .weight(1f)
+                .offset(y = if (isLandscape) (-4).dp else (-6).dp)
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 16.dp)
         ) {
-            if (searchQuery.isEmpty()) {
-                Spacer(modifier = Modifier.height(24.dp))
-            } else {
-                Spacer(modifier = Modifier.height(16.dp))
-            }
 
                     // 4. Content Sections
             // Games Section
@@ -236,7 +237,7 @@ fun LibraryDashboardScreen(
 }
 
 @Composable
-fun LibraryHeader() {
+fun LibraryHeader(isLandscape: Boolean = false) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -248,8 +249,8 @@ fun LibraryHeader() {
             contentDescription = "Shelf Palace Logo",
             modifier = Modifier
                 .fillMaxWidth()
-                .height(130.dp)
-                .offset(y = (-18).dp),
+                .height(if (isLandscape) 26.dp else 120.dp)
+                .then(if (isLandscape) Modifier.offset(y = (-8).dp) else Modifier.offset(y = (-30).dp)),
             contentScale = ContentScale.Fit
         )
     }

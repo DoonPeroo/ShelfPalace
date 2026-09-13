@@ -119,7 +119,7 @@ fun MovieDetailScreen(
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         NeonIconButton(
                             iconPainter = painterResource(

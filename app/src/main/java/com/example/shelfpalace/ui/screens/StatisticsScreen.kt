@@ -33,6 +33,34 @@ import com.example.shelfpalace.data.MusicRepository
 import com.example.shelfpalace.data.SettingsRepository
 import com.example.shelfpalace.data.StaticData
 import com.example.shelfpalace.ui.components.*
+import java.util.Locale
+
+data class ExpenseItem(
+    val title: String,
+    val totalAmount: Double,
+    val itemCount: Int,
+    val color: Color
+)
+
+fun parsePriceValue(priceStr: String): Double {
+    if (priceStr.isBlank()) return 0.0
+    val cleaned = priceStr
+        .replace(',', '.')
+        .replace(Regex("[^0-9.]"), "")
+    return cleaned.toDoubleOrNull() ?: 0.0
+}
+
+fun formatEuroAmount(amount: Double): String {
+    return String.format(Locale.GERMANY, "%.2f €", amount)
+}
+
+fun getPlatformColorForStats(id: String): Color {
+    return when (id) {
+        "nintendo_3ds" -> Color(0xFF40E0D0)
+        "nintendo_wiiu" -> Color(0xFF00AEEF)
+        else -> getRandomNeonColor(id)
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,6 +124,77 @@ fun StatisticsScreen(
         }.sortedByDescending { it.value }.toList()
     }
 
+    val defaultPrimary = MaterialTheme.colorScheme.primary
+    val defaultSecondary = MaterialTheme.colorScheme.secondary
+    val defaultTertiary = Color(0xFFFF00FF)
+
+    val movieFormatStats = remember(allMovies) {
+        val counts = allMovies.groupBy { it.formatId }.mapValues { it.value.size }
+        counts.asSequence().map { (id, count) ->
+            val name = StaticData.movieFormats.find { it.id == id }?.name ?: id.uppercase()
+            PieChartData(name, count.toFloat(), getRandomNeonColor(id))
+        }.sortedByDescending { it.value }.toList()
+    }
+
+    val musicFormatStats = remember(allMusic) {
+        val counts = allMusic.groupBy { it.formatId }.mapValues { it.value.size }
+        counts.asSequence().map { (id, count) ->
+            val name = StaticData.musicFormats.find { it.id == id }?.name ?: id.uppercase()
+            PieChartData(name, count.toFloat(), getRandomNeonColor(id))
+        }.sortedByDescending { it.value }.toList()
+    }
+
+    val expenseStats = remember(allGames, allMovies, allMusic) {
+        val items = mutableListOf<ExpenseItem>()
+
+        // Games grouped by platform
+        val gameExpenses = allGames
+            .filter { parsePriceValue(it.pricePaid) > 0.0 }
+            .groupBy { game ->
+                val platform = StaticData.platforms.find { it.id == game.platformId }
+                platform?.name ?: "Other"
+            }
+            .map { (platformName, list) ->
+                val sum = list.fold(0.0) { acc, g -> acc + parsePriceValue(g.pricePaid) }
+                val platform = StaticData.platforms.find { it.name == platformName }
+                val color = platform?.id?.let { getPlatformColorForStats(it) } ?: defaultPrimary
+                ExpenseItem(platformName, sum, list.size, color)
+            }
+        items.addAll(gameExpenses)
+
+        // Movies grouped by format
+        val movieExpenses = allMovies
+            .filter { parsePriceValue(it.pricePaid) > 0.0 }
+            .groupBy { movie ->
+                val format = StaticData.movieFormats.find { it.id == movie.formatId }
+                format?.name ?: "Other"
+            }
+            .map { (formatName, list) ->
+                val sum = list.fold(0.0) { acc, m -> acc + parsePriceValue(m.pricePaid) }
+                ExpenseItem("Movie ($formatName)", sum, list.size, defaultSecondary)
+            }
+        items.addAll(movieExpenses)
+
+        // Music grouped by format
+        val musicExpenses = allMusic
+            .filter { parsePriceValue(it.pricePaid) > 0.0 }
+            .groupBy { album ->
+                val format = StaticData.musicFormats.find { it.id == album.formatId }
+                format?.name ?: "Other"
+            }
+            .map { (formatName, list) ->
+                val sum = list.fold(0.0) { acc, a -> acc + parsePriceValue(a.pricePaid) }
+                ExpenseItem("Music ($formatName)", sum, list.size, defaultTertiary)
+            }
+        items.addAll(musicExpenses)
+
+        items.sortedByDescending { it.totalAmount }
+    }
+
+    val grandTotalSpent = remember(expenseStats) {
+        expenseStats.fold(0.0) { acc, item -> acc + item.totalAmount }
+    }
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -121,7 +220,7 @@ fun StatisticsScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (allGames.isEmpty()) {
+            if (allGames.isEmpty() && allMovies.isEmpty() && allMusic.isEmpty()) {
                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                     Text(
                         text = "NO DATA TO DISPLAY",
@@ -136,42 +235,90 @@ fun StatisticsScreen(
                 var visible by remember { mutableStateOf(false) }
                 LaunchedEffect(Unit) { visible = true }
 
-                AnimatedVisibility(
-                    visible = visible,
-                    enter = fadeIn(animationSpec = tween(500)) + slideInVertically(initialOffsetY = { 50 }, animationSpec = tween(500))
-                ) {
-                    val color = MaterialTheme.colorScheme.primary
-                    Column {
-                        CompactSectionHeader(text = "Games by Manufacturer", color = color)
-                        NeonCard(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = color,
-                            containerAlpha = 0.6f,
-                            padding = 8.dp
-                        ) {
-                            PieChart(data = manufacturerStats)
+                // 1. Games Sections
+                if (allGames.isNotEmpty()) {
+                    AnimatedVisibility(
+                        visible = visible,
+                        enter = fadeIn(animationSpec = tween(500, delayMillis = 100)) + slideInVertically(initialOffsetY = { 50 }, animationSpec = tween(500, delayMillis = 100))
+                    ) {
+                        val color = MaterialTheme.colorScheme.primary
+                        Column {
+                            CompactSectionHeader(text = "Games by Manufacturer", color = color)
+                            NeonCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = color,
+                                containerAlpha = 0.6f,
+                                padding = 8.dp
+                            ) {
+                                PieChart(data = manufacturerStats)
+                            }
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    AnimatedVisibility(
+                        visible = visible,
+                        enter = fadeIn(animationSpec = tween(500, delayMillis = 150)) + slideInVertically(initialOffsetY = { 50 }, animationSpec = tween(500, delayMillis = 150))
+                    ) {
+                        val color = MaterialTheme.colorScheme.primary
+                        Column {
+                            CompactSectionHeader(text = "Games by Console", color = color)
+                            NeonCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = color,
+                                containerAlpha = 0.6f,
+                                padding = 8.dp
+                            ) {
+                                PieChart(data = platformStats)
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                AnimatedVisibility(
-                    visible = visible,
-                    enter = fadeIn(animationSpec = tween(500, delayMillis = 150)) + slideInVertically(initialOffsetY = { 50 }, animationSpec = tween(500, delayMillis = 150))
-                ) {
-                    val color = MaterialTheme.colorScheme.primary
-                    Column {
-                        CompactSectionHeader(text = "Games by Console", color = color)
-                        NeonCard(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = color,
-                            containerAlpha = 0.6f,
-                            padding = 8.dp
-                        ) {
-                            PieChart(data = platformStats)
+                // 3. Movies Section
+                if (allMovies.isNotEmpty() && movieFormatStats.isNotEmpty()) {
+                    AnimatedVisibility(
+                        visible = visible,
+                        enter = fadeIn(animationSpec = tween(500, delayMillis = 200)) + slideInVertically(initialOffsetY = { 50 }, animationSpec = tween(500, delayMillis = 200))
+                    ) {
+                        val color = MaterialTheme.colorScheme.secondary
+                        Column {
+                            CompactSectionHeader(text = "Movies by Format", color = color)
+                            NeonCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = color,
+                                containerAlpha = 0.6f,
+                                padding = 8.dp
+                            ) {
+                                PieChart(data = movieFormatStats)
+                            }
                         }
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                // 4. Music Section
+                if (allMusic.isNotEmpty() && musicFormatStats.isNotEmpty()) {
+                    AnimatedVisibility(
+                        visible = visible,
+                        enter = fadeIn(animationSpec = tween(500, delayMillis = 250)) + slideInVertically(initialOffsetY = { 50 }, animationSpec = tween(500, delayMillis = 250))
+                    ) {
+                        val color = MaterialTheme.colorScheme.secondary
+                        Column {
+                            CompactSectionHeader(text = "Music by Format", color = color)
+                            NeonCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = color,
+                                containerAlpha = 0.6f,
+                                padding = 8.dp
+                            ) {
+                                PieChart(data = musicFormatStats)
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
                 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -213,6 +360,101 @@ fun StatisticsScreen(
                         }
                     }
                 }
+
+                if (expenseStats.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    AnimatedVisibility(
+                        visible = visible,
+                        enter = fadeIn(animationSpec = tween(500, delayMillis = 300)) + slideInVertically(initialOffsetY = { 50 }, animationSpec = tween(500, delayMillis = 300))
+                    ) {
+                        val accentColor = MaterialTheme.colorScheme.primary
+                        Column {
+                            CompactSectionHeader(text = "TOTAL EXPENSES", color = accentColor)
+                            NeonCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = accentColor,
+                                containerAlpha = 0.6f,
+                                padding = 8.dp
+                            ) {
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    expenseStats.forEachIndexed { index, item ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 2.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Text(
+                                                    text = item.title.uppercase(),
+                                                    style = MaterialTheme.typography.labelMedium.copy(
+                                                        fontWeight = FontWeight.Bold,
+                                                        letterSpacing = 0.5.sp
+                                                    ),
+                                                    color = accentColor
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = "(${item.itemCount})",
+                                                    style = MaterialTheme.typography.labelMedium.copy(
+                                                        fontWeight = FontWeight.Bold
+                                                    ),
+                                                    color = Color.White.copy(alpha = 0.6f)
+                                                )
+                                            }
+                                            Text(
+                                                text = formatEuroAmount(item.totalAmount),
+                                                style = MaterialTheme.typography.labelMedium.copy(
+                                                    fontWeight = FontWeight.Black
+                                                ),
+                                                color = item.color
+                                            )
+                                        }
+
+                                        if (index < expenseStats.size - 1) {
+                                            HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                                        }
+                                    }
+
+                                    HorizontalDivider(
+                                        color = accentColor.copy(alpha = 0.5f),
+                                        thickness = 1.dp,
+                                        modifier = Modifier.padding(vertical = 2.dp)
+                                    )
+
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 2.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "TOTAL SPENT",
+                                            style = MaterialTheme.typography.labelMedium.copy(
+                                                fontWeight = FontWeight.Black,
+                                                letterSpacing = 0.5.sp
+                                            ),
+                                            color = Color.White
+                                        )
+                                        Text(
+                                            text = formatEuroAmount(grandTotalSpent),
+                                            style = MaterialTheme.typography.labelMedium.copy(
+                                                fontWeight = FontWeight.Black
+                                            ),
+                                            color = accentColor
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -238,7 +480,8 @@ fun PieChart(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp, horizontal = 4.dp),
+            .defaultMinSize(minHeight = 108.dp)
+            .padding(vertical = 4.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {

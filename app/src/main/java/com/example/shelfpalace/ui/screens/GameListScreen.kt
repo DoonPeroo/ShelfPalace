@@ -215,7 +215,8 @@ fun GameListScreen(
                     }
                 }
             }
-        }
+        },
+        containerColor = Color.Transparent
     ) { padding ->
         Box(
             modifier = Modifier

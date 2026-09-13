@@ -15,8 +15,8 @@ android {
         applicationId = "com.example.shelfpalace"
         minSdk = 24
         targetSdk = 37
-        versionCode = 8
-        versionName = "ver. ALPHA 0.85"
+        versionCode = 9
+        versionName = "ver. BETA 0.85"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -58,6 +58,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     
     implementation(libs.androidx.core.ktx)
+    implementation("androidx.browser:browser:1.8.0")
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)

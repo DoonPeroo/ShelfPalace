@@ -1,7 +1,18 @@
 package com.example.shelfpalace.ui.screens
 
 import android.content.Intent
+import android.graphics.Bitmap
 import android.net.Uri
+import androidx.browser.customtabs.CustomTabsIntent
+import android.view.View
+import android.view.ViewGroup
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -65,7 +76,6 @@ fun GameDetailScreen(
     val scope = rememberCoroutineScope()
     val accentColor = MaterialTheme.colorScheme.primary
     val deepPurple = Color(0xFF9C27B0)
-    
     var screenshots by remember { mutableStateOf<List<String>>(emptyList()) }
     var videos by remember { mutableStateOf<List<IgdbVideo>>(emptyList()) }
     var isMediaLoading by remember { mutableStateOf(false) }
@@ -453,10 +463,10 @@ fun GameInfoTab(
 @Composable
 fun GameMediaTab(
     platformId: String,
-    accentColor: Color, 
-    screenshots: List<String>, 
+    accentColor: Color,
+    screenshots: List<String>,
     videos: List<IgdbVideo>,
-    isLoading: Boolean, 
+    isLoading: Boolean,
     onImageClick: (Int) -> Unit
 ) {
     val isDualScreen = platformId == "nintendo_ds" || platformId == "nintendo_3ds"

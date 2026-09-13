@@ -499,13 +499,11 @@ fun MainApp(
                                     gameId = route.gameId, 
                                     igdbId = igdbId
                                 )
-                            ) {
-                                popUpTo<Destinations.AddEditGame> { inclusive = true }
-                            }
+                            )
                         },
                         onBack = { navController.popBackStack() },
                         onClose = {
-                            navController.popBackStack<Destinations.AddEditGame>(inclusive = true)
+                            navController.popBackStack()
                         }
                     )
                 }

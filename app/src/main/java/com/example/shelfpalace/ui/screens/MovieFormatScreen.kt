@@ -1,7 +1,5 @@
 package com.example.shelfpalace.ui.screens
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -40,7 +38,7 @@ fun MovieFormatScreen(
     onSearchClick: () -> Unit,
     onScanClick: () -> Unit,
     onBack: () -> Unit,
-    onHome: () -> Unit,
+    @Suppress("UNUSED_PARAMETER") onHome: () -> Unit = {}
 ) {
     val disabledIds by settingsRepository.disabledIds.collectAsState(initial = emptySet())
     val formats = StaticData.movieFormats.filter { !disabledIds.contains(it.id) }

@@ -317,7 +317,7 @@ fun SearchAndFilterRow(
                         modifier = Modifier.size(24.dp)
                     ) {
                         Icon(
-                            painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_close),
+                            painter = painterResource(id = R.drawable.ic_close),
                             contentDescription = "Clear",
                             tint = Color.White.copy(alpha = 0.6f)
                         )

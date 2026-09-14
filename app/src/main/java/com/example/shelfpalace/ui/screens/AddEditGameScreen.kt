@@ -5,8 +5,6 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.activity.result.contract.ActivityResultContracts.TakePicture
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -104,7 +102,7 @@ fun AddEditGameScreen(
     onSave: (String) -> Unit,
     onIgdbSearch: (String) -> Unit,
     onBack: () -> Unit,
-    @Suppress("UNUSED_PARAMETER") onHome: () -> Unit,
+    @Suppress("UNUSED_PARAMETER") onHome: () -> Unit = {}
 ) {
     val context = LocalContext.current
     
@@ -127,7 +125,7 @@ fun AddEditGameScreen(
     var userRating by rememberSaveable { mutableStateOf<Double?>(null) }
     var criticRating by rememberSaveable { mutableStateOf<Double?>(null) }
     var currentIgdbId by rememberSaveable { mutableStateOf<Long?>(null) }
-    var dateAdded by rememberSaveable { mutableStateOf(System.currentTimeMillis()) }
+    var dateAdded by rememberSaveable { mutableLongStateOf(System.currentTimeMillis()) }
     var tempImageUriString by rememberSaveable { mutableStateOf<String?>(null) }
     var bitmapToCrop by remember { mutableStateOf<Bitmap?>(null) }
     var showCropDialog by remember { mutableStateOf(false) }
@@ -256,7 +254,7 @@ fun AddEditGameScreen(
 
     LaunchedEffect(title, currentPlatformId) {
         if (title.length >= 3 && currentIgdbId == null) {
-            delay(800)
+            delay(800L)
             if (title.length >= 3 && currentIgdbId == null) {
                 try {
                     val matches = withContext(Dispatchers.IO) {
@@ -293,7 +291,7 @@ fun AddEditGameScreen(
             tempImageUriString?.let { uriString ->
                 scope.launch {
                     val bitmap = withContext(Dispatchers.IO) {
-                        loadBitmapFromUri(context, android.net.Uri.parse(uriString))
+                        loadBitmapFromUri(context, Uri.parse(uriString))
                     }
                     if (bitmap != null) {
                         bitmapToCrop = bitmap
@@ -362,13 +360,6 @@ fun AddEditGameScreen(
                 }
             }
         }
-    }
-
-    val days = remember { (1..31).map { it.toString().padStart(2, '0') } }
-    val months = remember { (1..12).map { it.toString().padStart(2, '0') } }
-    val years = remember { 
-        val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
-        (currentYear downTo 1950).map { it.toString() }
     }
 
     if (isEditMode && !isInitialized) {

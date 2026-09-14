@@ -467,6 +467,7 @@ fun synthwaveTextFieldColors(
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Suppress("unused")
 @Composable
 fun synthwaveDatePickerColors(
     color: Color = MaterialTheme.colorScheme.primary,
@@ -909,6 +910,7 @@ fun Modifier.neonGlow(
     blurRadius: Dp = 4.dp
 ) = this.drawBehind {
     val paint = Paint()
+    @Suppress("DEPRECATION")
     val frameworkPaint = paint.asFrameworkPaint()
     frameworkPaint.color = Color.Transparent.toArgb()
     frameworkPaint.setShadowLayer(
@@ -939,10 +941,10 @@ fun ImageCropDialog(
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     
     // Normalized coordinates (0.0 to 1.0) relative to the image
-    var left by remember { mutableStateOf(0.1f) }
-    var top by remember { mutableStateOf(0.1f) }
-    var right by remember { mutableStateOf(0.9f) }
-    var bottom by remember { mutableStateOf(0.9f) }
+    var left by remember { mutableFloatStateOf(0.1f) }
+    var top by remember { mutableFloatStateOf(0.1f) }
+    var right by remember { mutableFloatStateOf(0.9f) }
+    var bottom by remember { mutableFloatStateOf(0.9f) }
 
     Dialog(onDismissRequest = onDismiss) {
         NeonCard(
@@ -1030,7 +1032,7 @@ fun ImageCropDialog(
                         contentScale = ContentScale.FillBounds // Fill the ratio-accurate box
                     )
                     
-                        val borderAccent = com.example.shelfpalace.ui.theme.SynthwaveLavender
+                        val borderAccent = SynthwaveLavender
                 androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
                         val w = size.width
                         val h = size.height

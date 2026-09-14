@@ -45,7 +45,7 @@ fun MovieDetailScreen(
     onEditMovie: (String) -> Unit,
     onFormatClick: (String) -> Unit,
     onBack: () -> Unit,
-    onHome: () -> Unit,
+    @Suppress("UNUSED_PARAMETER") onHome: () -> Unit = {}
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val movie by repository.getMovieStream(movieId).collectAsStateWithLifecycle(initialValue = null)

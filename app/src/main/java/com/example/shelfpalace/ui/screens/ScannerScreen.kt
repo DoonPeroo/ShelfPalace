@@ -133,13 +133,10 @@ fun ScannerContent(
     
     var detectedObject by remember { mutableStateOf<com.google.mlkit.vision.objects.DetectedObject?>(null) }
     var detectedText by remember { mutableStateOf("") }
-    var isScanning by remember { mutableStateOf(false) }
-    var flashEnabled by remember { mutableStateOf(false) }
-    var showNothingFound by remember { mutableStateOf(false) }
-    var internetSearching by remember { mutableStateOf(false) }
-    
-    // Track recently recognized games to simulate variety
-    val recognizedHistory = remember { mutableStateListOf<String>() }
+    var isScanning by remember { mutableStateOf(value = false) }
+    var flashEnabled by remember { mutableStateOf(value = false) }
+    var showNothingFound by remember { mutableStateOf(value = false) }
+    var internetSearching by remember { mutableStateOf(value = false) }
     
     val cameraExecutor: ExecutorService = remember { Executors.newSingleThreadExecutor() }
     

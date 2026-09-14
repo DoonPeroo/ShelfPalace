@@ -38,7 +38,7 @@ object IgdbService {
 
     private val api = retrofit.create(IgdbApi::class.java)
 
-    private const val commonFields = "name, summary, cover.url, first_release_date, genres.name, involved_companies.company.name, rating, aggregated_rating, total_rating, platforms, screenshots.url, videos.video_id, videos.name"
+    private const val COMMON_FIELDS = "name, summary, cover.url, first_release_date, genres.name, involved_companies.company.name, rating, aggregated_rating, total_rating, platforms, screenshots.url, videos.video_id, videos.name"
 
     suspend fun search(title: String, platformId: String? = null): List<IgdbGame> {
         if (clientId.isEmpty() || accessToken.isEmpty()) return emptyList()
@@ -60,12 +60,12 @@ object IgdbService {
 
         // Stage 1: Try exact search with platform filter
         if (igdbPlatformId != null) {
-            val res1 = executeQuery("search \"$escapedTitle\"; fields $commonFields; where platforms = ($igdbPlatformId); limit 50;")
+            val res1 = executeQuery("search \"$escapedTitle\"; fields $COMMON_FIELDS; where platforms = ($igdbPlatformId); limit 50;")
             if (res1.isNotEmpty()) return res1
         }
         
         // Stage 2: Try global exact search without platform restriction
-        val res2 = executeQuery("search \"$escapedTitle\"; fields $commonFields; limit 50;")
+        val res2 = executeQuery("search \"$escapedTitle\"; fields $COMMON_FIELDS; limit 50;")
         if (res2.isNotEmpty()) return res2
 
         // Stage 3: Tokenized wildcard search for multi-word queries (e.g. "Mario Wonder" -> name ~ *"Mario"* & name ~ *"Wonder"*)
@@ -75,11 +75,11 @@ object IgdbService {
                 "name ~ *\"${word.replace("\"", "\\\"")}\"*"
             }
             val platformClause = if (igdbPlatformId != null) " & platforms = ($igdbPlatformId)" else ""
-            val res3 = executeQuery("fields $commonFields; where $tokenFilter$platformClause; limit 50;")
+            val res3 = executeQuery("fields $COMMON_FIELDS; where $tokenFilter$platformClause; limit 50;")
             if (res3.isNotEmpty()) return res3
             
             if (igdbPlatformId != null) {
-                val res4 = executeQuery("fields $commonFields; where $tokenFilter; limit 50;")
+                val res4 = executeQuery("fields $COMMON_FIELDS; where $tokenFilter; limit 50;")
                 if (res4.isNotEmpty()) return res4
             }
         }
@@ -87,7 +87,7 @@ object IgdbService {
         // Stage 4: Try searching with the longest single word
         val longestWord = words.maxByOrNull { it.length }
         if (longestWord != null && longestWord.length >= 3) {
-            val res5 = executeQuery("search \"${longestWord.replace("\"", "\\\"")}\"; fields $commonFields; limit 50;")
+            val res5 = executeQuery("search \"${longestWord.replace("\"", "\\\"")}\"; fields $COMMON_FIELDS; limit 50;")
             if (res5.isNotEmpty()) return res5
         }
 
@@ -97,7 +97,7 @@ object IgdbService {
     suspend fun getGameById(id: Long): IgdbGame? {
         if (clientId.isEmpty() || accessToken.isEmpty()) return null
         
-        val bodyString = "fields $commonFields; where id = $id;"
+        val bodyString = "fields $COMMON_FIELDS; where id = $id;"
         val body = bodyString.toRequestBody("text/plain".toMediaType())
         
         return try {

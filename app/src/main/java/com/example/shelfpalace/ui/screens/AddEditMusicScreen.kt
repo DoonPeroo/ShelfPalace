@@ -4,7 +4,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.activity.result.contract.ActivityResultContracts.TakePicture
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -83,7 +82,7 @@ fun AddEditMusicScreen(
     var isFavorite by rememberSaveable { mutableStateOf(false) }
     var purchaseDate by rememberSaveable { mutableStateOf("") }
     var pricePaid by rememberSaveable { mutableStateOf("") }
-    var dateAdded by rememberSaveable { mutableStateOf(System.currentTimeMillis()) }
+    var dateAdded by rememberSaveable { mutableLongStateOf(System.currentTimeMillis()) }
     var tempImageUriString by rememberSaveable { mutableStateOf<String?>(null) }
     var bitmapToCrop by remember { mutableStateOf<Bitmap?>(null) }
     var showCropDialog by remember { mutableStateOf(false) }
@@ -159,13 +158,6 @@ fun AddEditMusicScreen(
                 }
             }
         }
-    }
-
-    val days = remember { (1..31).map { it.toString().padStart(2, '0') } }
-    val months = remember { (1..12).map { it.toString().padStart(2, '0') } }
-    val years = remember { 
-        val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
-        (currentYear downTo 1920).map { it.toString() }
     }
 
     val pickMedia = rememberLauncherForActivityResult(PickVisualMedia()) { uri ->

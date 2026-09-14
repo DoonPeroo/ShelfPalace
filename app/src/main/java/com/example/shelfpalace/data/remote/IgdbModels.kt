@@ -9,22 +9,22 @@ data class IgdbGame(
     val name: String?,
     val summary: String? = null,
     val cover: IgdbCover? = null,
-    @Json(name = "first_release_date") val firstReleaseDate: Long? = null,
-    @Json(name = "involved_companies") val involvedCompanies: List<IgdbCompany>? = null,
+    @field:Json(name = "first_release_date") val firstReleaseDate: Long? = null,
+    @field:Json(name = "involved_companies") val involvedCompanies: List<IgdbCompany>? = null,
     val genres: List<IgdbGenre>? = null,
     val rating: Double? = null,
-    @Json(name = "aggregated_rating") val aggregatedRating: Double? = null,
-    @Json(name = "total_rating") val totalRating: Double? = null,
+    @field:Json(name = "aggregated_rating") val aggregatedRating: Double? = null,
+    @field:Json(name = "total_rating") val totalRating: Double? = null,
     val platforms: List<Long>? = null,
     val screenshots: List<IgdbScreenshot>? = null,
-    val videos: List<IgdbVideo>? = null
+    val videos: List<IgdbVideo>? = null,
 )
 
 @JsonClass(generateAdapter = true)
 data class IgdbVideo(
     val id: Long?,
     val name: String?,
-    @Json(name = "video_id") val videoId: String?
+    @field:Json(name = "video_id") val videoId: String?
 )
 
 @JsonClass(generateAdapter = true)

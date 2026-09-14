@@ -3,7 +3,6 @@ package com.example.shelfpalace.ui.screens
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
-import androidx.browser.customtabs.CustomTabsIntent
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
@@ -68,21 +67,19 @@ fun GameDetailScreen(
     repository: GameRepository,
     onEditGame: (String) -> Unit,
     onPlatformClick: (String) -> Unit,
-    onBack: () -> Unit,
-    onHome: () -> Unit,
+    onBack: () -> Unit
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     val game by repository.getGameStream(gameId).collectAsStateWithLifecycle(initialValue = null)
-    var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var showDeleteConfirmation by remember { mutableStateOf(value = false) }
     var selectedImageIndex by remember { mutableStateOf<Int?>(null) }
     var selectedVideoId by remember { mutableStateOf<String?>(null) }
     var selectedVideoTitle by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val accentColor = MaterialTheme.colorScheme.primary
-    val deepPurple = Color(0xFF9C27B0)
     var screenshots by remember { mutableStateOf<List<String>>(emptyList()) }
     var videos by remember { mutableStateOf<List<IgdbVideo>>(emptyList()) }
-    var isMediaLoading by remember { mutableStateOf(false) }
+    var isMediaLoading by remember { mutableStateOf(value = false) }
     
     LaunchedEffect(game?.id) {
         val currentGame = game ?: return@LaunchedEffect
@@ -127,9 +124,11 @@ fun GameDetailScreen(
                     val igdbGame = withContext(Dispatchers.IO) { IgdbService.getGameById(targetId) }
                     igdbGame?.let { fetched ->
                         fetched.screenshots?.let { list ->
-                            screenshots = list.mapNotNull { it.url }.map { url ->
-                                if (url.startsWith("//")) "https:$url" else url
-                            }.map { it.replace("t_thumb", "t_720p") }
+                            screenshots = list.asSequence()
+                                .mapNotNull { it.url }
+                                .map { url -> if (url.startsWith("//")) "https:$url" else url }
+                                .map { it.replace("t_thumb", "t_720p") }
+                                .toList()
                         }
                         fetched.videos?.let { list ->
                             videos = list.filter { !it.videoId.isNullOrBlank() }
@@ -488,7 +487,6 @@ fun GameMediaTab(
     onVideoClick: (String, String) -> Unit
 ) {
     val isDualScreen = platformId == "nintendo_ds" || platformId == "nintendo_3ds"
-    val context = LocalContext.current
 
     Column {
         // Screenshots Section

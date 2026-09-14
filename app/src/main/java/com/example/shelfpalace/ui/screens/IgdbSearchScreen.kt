@@ -57,9 +57,8 @@ fun IgdbSearchScreen(
     }
     
     var lastSearchedQuery by rememberSaveable { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(value = false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    val context = androidx.compose.ui.platform.LocalContext.current
 
     // Search trigger
     LaunchedEffect(searchQuery) {

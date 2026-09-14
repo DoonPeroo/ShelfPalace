@@ -169,9 +169,7 @@ private fun BottomNavItem(
         val iconModifier = Modifier.size(26.dp)
         
         if (selected && selectedBrush != null) {
-            val painter = if (iconPainter != null) iconPainter else {
-                rememberVectorPainter(icon!!)
-            }
+            val painter = iconPainter ?: rememberVectorPainter(icon!!)
             Icon(
                 painter = painter,
                 contentDescription = label,

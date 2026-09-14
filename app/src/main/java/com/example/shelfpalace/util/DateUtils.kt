@@ -21,29 +21,32 @@ object DateUtils {
     fun formatDisplayDate(dateString: String): String {
         if (dateString.isEmpty()) return ""
         return try {
-            val date = dbFormat.parse(dateString)
-            uiFormat.format(date!!)
-        } catch (e: Exception) {
+            val date = dbFormat.parse(dateString) ?: return dateString
+            uiFormat.format(date)
+        } catch (_: Exception) {
             dateString
         }
     }
 
+    @Suppress("unused")
     fun formatToDb(date: Date): String = dbFormat.format(date)
     
+    @Suppress("unused")
     fun formatToUi(date: Date): String = uiFormat.format(date)
 
     fun formatTimestamp(timestamp: Long): String {
         return uiFormat.format(Date(timestamp))
     }
 
+    @Suppress("unused")
     fun parseDate(dateString: String): Date? {
         if (dateString.isEmpty()) return null
         return try {
             dbFormat.parse(dateString)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             try {
                 yearFormat.parse(dateString)
-            } catch (e2: Exception) {
+            } catch (_: Exception) {
                 null
             }
         }

@@ -1,7 +1,5 @@
 package com.example.shelfpalace.ui.screens
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -36,7 +34,7 @@ fun PlatformScreen(
     settingsRepository: SettingsRepository,
     onPlatformSelected: (String) -> Unit,
     onBack: () -> Unit,
-    onHome: () -> Unit,
+    @Suppress("UNUSED_PARAMETER") onHome: () -> Unit = {}
 ) {
     val disabledIds by settingsRepository.disabledIds.collectAsState(initial = emptySet())
     val platforms = StaticData.platforms.filter { 

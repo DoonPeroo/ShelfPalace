@@ -55,16 +55,16 @@ fun MainApp(
     val currentDestination = navBackStackEntry?.destination
     val scope = rememberCoroutineScope()
     
-    var showAddDialog by remember { mutableStateOf(false) }
-    var showPlatformSelection by remember { mutableStateOf(false) }
+    var showAddDialog by remember { mutableStateOf(value = false) }
+    var showPlatformSelection by remember { mutableStateOf(value = false) }
     var selectedManufacturerFilter by remember { mutableStateOf<String?>(null) }
-    var showMovieFormatSelection by remember { mutableStateOf(false) }
-    var showMusicFormatSelection by remember { mutableStateOf(false) }
+    var showMovieFormatSelection by remember { mutableStateOf(value = false) }
+    var showMusicFormatSelection by remember { mutableStateOf(value = false) }
 
-    var isAppLoading by remember { mutableStateOf(true) }
+    var isAppLoading by remember { mutableStateOf(value = true) }
 
     LaunchedEffect(Unit) {
-        delay(800)
+        delay(800L)
         isAppLoading = false
     }
 
@@ -74,7 +74,7 @@ fun MainApp(
 
     BackHandler(enabled = isRoot && !isAppLoading) {
         val currentTime = System.currentTimeMillis()
-        if (currentTime - backPressedTime < 2000) {
+        if ((currentTime - backPressedTime) < 2000) {
             (context as? Activity)?.finish()
         } else {
             backPressedTime = currentTime
@@ -450,10 +450,7 @@ fun MainApp(
                         onPlatformClick = { platformId ->
                             navController.navigate(Destinations.GameList(platformId))
                         },
-                        onBack = { navController.popBackStack() },
-                        onHome = { 
-                            navController.popBackStack(Destinations.LibraryDashboard, false)
-                        }
+                        onBack = { navController.popBackStack() }
                     )
                 }
                 composable<Destinations.AddEditGame> { backStackEntry ->
@@ -480,10 +477,7 @@ fun MainApp(
                                 )
                             )
                         },
-                        onBack = { navController.popBackStack() },
-                        onHome = { 
-                            navController.popBackStack<Destinations.AddEditGame>(inclusive = true)
-                        }
+                        onBack = { navController.popBackStack() }
                     )
                 }
                 
@@ -891,8 +885,10 @@ fun MusicFormatSelectionDialog(
     val disabledIds by settingsRepository.disabledIds.collectAsState(initial = emptySet())
     val activeFormats = remember(disabledIds) {
         StaticData.musicFormats
+            .asSequence()
             .filter { !disabledIds.contains(it.id) }
             .map { it.id to it.name }
+            .toList()
     }
     MediaFormatSelectionDialog(
         formats = activeFormats,

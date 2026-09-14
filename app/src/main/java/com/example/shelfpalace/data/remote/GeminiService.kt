@@ -6,6 +6,7 @@ import com.google.ai.client.generativeai.type.content
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+@Suppress("unused")
 class GeminiService {
     private val apiKey = "YOUR_GEMINI_API_KEY_HERE"
     private val model = GenerativeModel(

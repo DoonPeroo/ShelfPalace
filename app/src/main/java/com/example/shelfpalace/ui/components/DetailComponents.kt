@@ -36,7 +36,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.example.shelfpalace.R
-import com.example.shelfpalace.ui.theme.DarkBackground
 import kotlinx.coroutines.launch
 
 @Composable

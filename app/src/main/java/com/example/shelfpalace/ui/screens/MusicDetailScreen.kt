@@ -64,7 +64,7 @@ fun MusicDetailScreen(
     onEditMusic: (String) -> Unit,
     onFormatClick: (String) -> Unit,
     onBack: () -> Unit,
-    onHome: () -> Unit,
+    @Suppress("UNUSED_PARAMETER") onHome: () -> Unit = {}
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val music by repository.getMusicStream(musicId).collectAsStateWithLifecycle(initialValue = null)

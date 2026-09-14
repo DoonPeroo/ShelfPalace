@@ -4,7 +4,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.activity.result.contract.ActivityResultContracts.TakePicture
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -85,7 +84,7 @@ fun AddEditMovieScreen(
     var isFavorite by rememberSaveable { mutableStateOf(false) }
     var purchaseDate by rememberSaveable { mutableStateOf("") }
     var pricePaid by rememberSaveable { mutableStateOf("") }
-    var dateAdded by rememberSaveable { mutableStateOf(System.currentTimeMillis()) }
+    var dateAdded by rememberSaveable { mutableLongStateOf(System.currentTimeMillis()) }
     var tempImageUriString by rememberSaveable { mutableStateOf<String?>(null) }
     var bitmapToCrop by remember { mutableStateOf<Bitmap?>(null) }
     var showCropDialog by remember { mutableStateOf(false) }
@@ -97,16 +96,10 @@ fun AddEditMovieScreen(
     var selectedDay by rememberSaveable { mutableStateOf("") }
     var selectedMonth by rememberSaveable { mutableStateOf("") }
     var selectedYear by rememberSaveable { mutableStateOf("") }
-    var dayExpanded by remember { mutableStateOf(false) }
-    var monthExpanded by remember { mutableStateOf(false) }
-    var yearExpanded by remember { mutableStateOf(false) }
     
     var selectedPurchaseDay by rememberSaveable { mutableStateOf("") }
     var selectedPurchaseMonth by rememberSaveable { mutableStateOf("") }
     var selectedPurchaseYear by rememberSaveable { mutableStateOf("") }
-    var purchaseDayExpanded by remember { mutableStateOf(false) }
-    var purchaseMonthExpanded by remember { mutableStateOf(false) }
-    var purchaseYearExpanded by remember { mutableStateOf(false) }
     
     val scope = rememberCoroutineScope()
     val isEditMode = movieId != null
@@ -160,13 +153,6 @@ fun AddEditMovieScreen(
                 }
             }
         }
-    }
-
-    val days = remember { (1..31).map { it.toString().padStart(2, '0') } }
-    val months = remember { (1..12).map { it.toString().padStart(2, '0') } }
-    val years = remember { 
-        val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
-        (currentYear downTo 1920).map { it.toString() }
     }
 
     val pickMedia = rememberLauncherForActivityResult(PickVisualMedia()) { uri ->

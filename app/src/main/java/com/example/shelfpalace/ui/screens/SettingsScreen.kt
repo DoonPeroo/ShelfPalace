@@ -61,9 +61,9 @@ fun SettingsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val disabledIds by repository.disabledIds.collectAsState(initial = emptySet())
-    val cornerStyle by repository.cornerStyle.collectAsState(initial = com.example.shelfpalace.data.CornerStyle.ROUNDED)
+    val cornerStyle by repository.cornerStyle.collectAsState(initial = CornerStyle.ROUNDED)
     var expandedManufacturerId by remember { mutableStateOf<String?>(null) }
-    var isGamesExpanded by remember { mutableStateOf(false) }
+    var isGamesExpanded by remember { mutableStateOf(value = false) }
     var isVideoExpanded by remember { mutableStateOf(false) }
     var isMusicExpanded by remember { mutableStateOf(false) }
     
@@ -810,9 +810,9 @@ private suspend fun performRestore(
             
             settingsRepository.restoreSettings(
                 disabledIds = backupData.disabledIds.toSet(),
-                sortOption = try { SortOption.valueOf(backupData.sortOption) } catch (e: Exception) { SortOption.NAME },
+                sortOption = try { SortOption.valueOf(backupData.sortOption) } catch (_: Exception) { SortOption.NAME },
                 dashboardFilter = backupData.dashboardFilter,
-                cornerStyle = try { CornerStyle.valueOf(backupData.cornerStyle) } catch (e: Exception) { CornerStyle.ROUNDED }
+                cornerStyle = try { CornerStyle.valueOf(backupData.cornerStyle) } catch (_: Exception) { CornerStyle.ROUNDED }
             )
             
             val total = backupData.games.size + backupData.movies.size + backupData.music.size

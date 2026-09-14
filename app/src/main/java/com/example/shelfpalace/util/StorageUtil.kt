@@ -268,10 +268,10 @@ object StorageUtil {
             
             // Handle legacy format (just list of games) or new format (BackupData)
             val backupData = try {
-                json.decodeFromString(com.example.shelfpalace.data.BackupData.serializer(), backupJson!!)
-            } catch (e: Exception) {
+                json.decodeFromString(BackupData.serializer(), backupJson)
+            } catch (_: Exception) {
                 // Legacy fallback
-                val games = json.decodeFromString<List<Game>>(backupJson!!)
+                val games = json.decodeFromString<List<Game>>(backupJson)
                 BackupData(games = games)
             }
             

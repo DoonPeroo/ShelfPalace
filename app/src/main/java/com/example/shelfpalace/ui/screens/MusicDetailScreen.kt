@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -54,7 +55,10 @@ import com.example.shelfpalace.ui.theme.DarkBackground
 import com.example.shelfpalace.util.DateUtils
 import com.example.shelfpalace.util.StorageUtil
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.shelfpalace.data.remote.IgdbVideo
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,11 +74,14 @@ fun MusicDetailScreen(
     val music by repository.getMusicStream(musicId).collectAsStateWithLifecycle(initialValue = null)
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     var selectedImageIndex by remember { mutableStateOf<Int?>(null) }
+    var selectedVideoId by remember { mutableStateOf<String?>(null) }
+    var selectedVideoTitle by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val accentColor = MaterialTheme.colorScheme.primary
     
-    val screenshots = emptyList<String>()
-    val isMediaLoading = false
+    var screenshots by remember { mutableStateOf<List<String>>(emptyList()) }
+    var videos by remember { mutableStateOf<List<IgdbVideo>>(emptyList()) }
+    var isMediaLoading by remember { mutableStateOf(false) }
     
     var selectedTabIndex by remember { mutableStateOf(0) }
     val tabs = listOf("Info", "Media", "My Details")
@@ -88,6 +95,12 @@ fun MusicDetailScreen(
     music?.let { currentMusic ->
         LaunchedEffect(currentMusic.notes) {
             editingNotes = currentMusic.notes
+        }
+
+        LaunchedEffect(currentMusic.id) {
+            if (screenshots.isEmpty() && currentMusic.coverUri.isNotBlank()) {
+                screenshots = listOf(currentMusic.coverUri)
+            }
         }
 
         Scaffold(
@@ -191,7 +204,7 @@ fun MusicDetailScreen(
                             model = currentMusic.coverUri.ifEmpty { "https://via.placeholder.com/400x400?text=${currentMusic.title}" },
                             contentDescription = currentMusic.title,
                             modifier = Modifier
-                                .width(140.dp)
+                                .width(185.dp)
                                 .aspectRatio(1f)
                                 .clip(getAppCorners(12.dp))
                                 .border(1.dp, accentColor.copy(alpha = 0.5f), getAppCorners(12.dp)),
@@ -242,7 +255,17 @@ fun MusicDetailScreen(
                     ) {
                         when (selectedTabIndex) {
                             0 -> MusicInfoTab(currentMusic, accentColor, onFormatClick)
-                            1 -> MusicMediaTab(accentColor, screenshots, isMediaLoading, onImageClick = { selectedImageIndex = it })
+                            1 -> MusicMediaTab(
+                                accentColor = accentColor, 
+                                screenshots = screenshots, 
+                                videos = videos, 
+                                isLoading = isMediaLoading, 
+                                onImageClick = { selectedImageIndex = it },
+                                onVideoClick = { vId, vTitle ->
+                                    selectedVideoId = vId
+                                    selectedVideoTitle = vTitle
+                                }
+                            )
                             2 -> MusicDetailsTab(
                                 music = currentMusic, 
                                 accentColor = accentColor,
@@ -306,6 +329,15 @@ fun MusicDetailScreen(
             screenshots = screenshots,
             initialIndex = index,
             onDismiss = { selectedImageIndex = null },
+            accentColor = accentColor
+        )
+    }
+
+    selectedVideoId?.let { vId ->
+        VideoPlayerDialog(
+            videoId = vId,
+            videoTitle = selectedVideoTitle,
+            onDismissRequest = { selectedVideoId = null },
             accentColor = accentColor
         )
     }
@@ -377,54 +409,108 @@ fun MusicInfoTab(
 }
 
 @Composable
-fun MusicMediaTab(accentColor: Color, screenshots: List<String>, isLoading: Boolean, onImageClick: (Int) -> Unit) {
-    Column {
-        Text(
-            "Screenshots",
-            style = MaterialTheme.typography.titleMedium.copy(color = Color.White, fontWeight = FontWeight.Bold)
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = accentColor, modifier = Modifier.size(32.dp))
-            }
-        } else if (screenshots.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp)
-                    .background(Color.White.copy(alpha = 0.05f), getAppCorners(8.dp))
-                    .border(1.dp, Color.White.copy(alpha = 0.1f), getAppCorners(8.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Rounded.CloudOff, contentDescription = null, tint = Color.White.copy(alpha = 0.2f), modifier = Modifier.size(40.dp))
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("No screenshots available", color = Color.White.copy(alpha = 0.4f))
+fun MusicMediaTab(
+    accentColor: Color,
+    screenshots: List<String>,
+    videos: List<IgdbVideo>,
+    isLoading: Boolean,
+    onImageClick: (Int) -> Unit,
+    onVideoClick: (String, String) -> Unit = { _, _ -> }
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column {
+            Text(
+                "Album Cover & Media",
+                style = MaterialTheme.typography.titleMedium.copy(color = Color.White, fontWeight = FontWeight.Bold)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = accentColor, modifier = Modifier.size(32.dp))
+                }
+            } else if (screenshots.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .background(Color.White.copy(alpha = 0.05f), getAppCorners(8.dp))
+                        .border(1.dp, Color.White.copy(alpha = 0.1f), getAppCorners(8.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Rounded.CloudOff, contentDescription = null, tint = Color.White.copy(alpha = 0.2f), modifier = Modifier.size(36.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text("No Discogs media available", color = Color.White.copy(alpha = 0.4f))
+                    }
+                }
+            } else {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    itemsIndexed(screenshots) { index, url ->
+                        AsyncImage(
+                            model = url,
+                            contentDescription = "Discogs Media",
+                            modifier = Modifier
+                                .size(160.dp)
+                                .clip(getAppCorners(12.dp))
+                                .border(1.dp, accentColor.copy(alpha = 0.5f), getAppCorners(12.dp))
+                                .clickable { onImageClick(index) },
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                 }
             }
-        } else {
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
-                itemsIndexed(screenshots) { index, url ->
-                    AsyncImage(
-                        model = url,
-                        contentDescription = "Screenshot",
-                        modifier = Modifier
-                            .size(width = 280.dp, height = 157.dp)
-                            .clip(getAppCorners(12.dp))
-                            .border(1.dp, Color.White.copy(alpha = 0.1f), getAppCorners(12.dp))
-                            .clickable { onImageClick(index) },
-                        contentScale = ContentScale.Crop
-                    )
+        }
+
+        if (videos.isNotEmpty()) {
+            Column {
+                Text(
+                    "Videos & Music Clips",
+                    style = MaterialTheme.typography.titleMedium.copy(color = Color.White, fontWeight = FontWeight.Bold)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(videos) { video ->
+                        val thumbUrl = "https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg"
+                        Box(
+                            modifier = Modifier
+                                .width(200.dp)
+                                .height(115.dp)
+                                .clip(getAppCorners(12.dp))
+                                .border(1.dp, accentColor.copy(alpha = 0.5f), getAppCorners(12.dp))
+                                .clickable { onVideoClick(video.videoId ?: "", video.name ?: "Music Video") }
+                        ) {
+                            AsyncImage(
+                                model = thumbUrl,
+                                contentDescription = video.name,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.4f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.PlayArrow,
+                                    contentDescription = "Play",
+                                    tint = accentColor,
+                                    modifier = Modifier.size(48.dp)
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

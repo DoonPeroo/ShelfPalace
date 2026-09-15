@@ -60,12 +60,12 @@ object IgdbService {
 
         // Stage 1: Try exact search with platform filter
         if (igdbPlatformId != null) {
-            val res1 = executeQuery("search \"$escapedTitle\"; fields $COMMON_FIELDS; where platforms = ($igdbPlatformId); limit 50;")
+            val res1 = executeQuery("search \"$escapedTitle\"; fields $COMMON_FIELDS; where platforms = ($igdbPlatformId); limit 100;")
             if (res1.isNotEmpty()) return res1
         }
         
         // Stage 2: Try global exact search without platform restriction
-        val res2 = executeQuery("search \"$escapedTitle\"; fields $COMMON_FIELDS; limit 50;")
+        val res2 = executeQuery("search \"$escapedTitle\"; fields $COMMON_FIELDS; limit 100;")
         if (res2.isNotEmpty()) return res2
 
         // Stage 3: Tokenized wildcard search for multi-word queries (e.g. "Mario Wonder" -> name ~ *"Mario"* & name ~ *"Wonder"*)
@@ -75,11 +75,11 @@ object IgdbService {
                 "name ~ *\"${word.replace("\"", "\\\"")}\"*"
             }
             val platformClause = if (igdbPlatformId != null) " & platforms = ($igdbPlatformId)" else ""
-            val res3 = executeQuery("fields $COMMON_FIELDS; where $tokenFilter$platformClause; limit 50;")
+            val res3 = executeQuery("fields $COMMON_FIELDS; where $tokenFilter$platformClause; limit 100;")
             if (res3.isNotEmpty()) return res3
             
             if (igdbPlatformId != null) {
-                val res4 = executeQuery("fields $COMMON_FIELDS; where $tokenFilter; limit 50;")
+                val res4 = executeQuery("fields $COMMON_FIELDS; where $tokenFilter; limit 100;")
                 if (res4.isNotEmpty()) return res4
             }
         }
@@ -87,7 +87,7 @@ object IgdbService {
         // Stage 4: Try searching with the longest single word
         val longestWord = words.maxByOrNull { it.length }
         if (longestWord != null && longestWord.length >= 3) {
-            val res5 = executeQuery("search \"${longestWord.replace("\"", "\\\"")}\"; fields $COMMON_FIELDS; limit 50;")
+            val res5 = executeQuery("search \"${longestWord.replace("\"", "\\\"")}\"; fields $COMMON_FIELDS; limit 100;")
             if (res5.isNotEmpty()) return res5
         }
 

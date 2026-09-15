@@ -65,7 +65,7 @@ fun AddEditMusicScreen(
     repository: MusicRepository,
     onSave: (String) -> Unit,
     onBack: () -> Unit,
-    @Suppress("UNUSED_PARAMETER") onHome: () -> Unit,
+    @Suppress("UNUSED_PARAMETER") onHome: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val musicColor = MaterialTheme.colorScheme.secondary
@@ -302,30 +302,6 @@ fun AddEditMusicScreen(
                         shape = getAppCorners(8.dp),
                         colors = synthwaveTextFieldColors(musicColor)
                     )
-                    
-                    Text(
-                        text = stringResource(R.string.label_release_date).uppercase(),
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                        color = musicColor,
-                        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
-                    )
-                    
-                    DateDropdownPicker(
-                        label = stringResource(R.string.label_release_date),
-                        selectedDay = selectedDay,
-                        selectedMonth = selectedMonth,
-                        selectedYear = selectedYear,
-                        onDateChanged = { d, m, y ->
-                            selectedDay = d
-                            selectedMonth = m
-                            selectedYear = y
-                            if (d.isNotEmpty() && m.isNotEmpty() && y.isNotEmpty()) {
-                                releaseDate = "$y-$m-$d"
-                                displayDate = DateUtils.formatDisplayDate(releaseDate)
-                            }
-                        },
-                        accentColor = musicColor
-                    )
 
                     OutlinedTextField(
                         value = genre,
@@ -346,6 +322,23 @@ fun AddEditMusicScreen(
                     )
 
                     DateDropdownPicker(
+                        label = stringResource(R.string.label_release_date),
+                        selectedDay = selectedDay,
+                        selectedMonth = selectedMonth,
+                        selectedYear = selectedYear,
+                        onDateChanged = { d, m, y ->
+                            selectedDay = d
+                            selectedMonth = m
+                            selectedYear = y
+                            if (d.isNotEmpty() && m.isNotEmpty() && y.isNotEmpty()) {
+                                releaseDate = "$y-$m-$d"
+                                displayDate = DateUtils.formatDisplayDate(releaseDate)
+                            }
+                        },
+                        accentColor = musicColor
+                    )
+
+                    DateDropdownPicker(
                         label = "PURCHASE DATE",
                         selectedDay = selectedPurchaseDay,
                         selectedMonth = selectedPurchaseMonth,
@@ -363,6 +356,17 @@ fun AddEditMusicScreen(
                             }
                         },
                         accentColor = musicColor
+                    )
+
+                    OutlinedTextField(
+                        value = pricePaid,
+                        onValueChange = { pricePaid = it },
+                        label = { Text("Purchase Price / Paid") },
+                        placeholder = { Text("e.g. 19.99 €") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = getAppCorners(8.dp),
+                        singleLine = true,
+                        colors = synthwaveTextFieldColors(musicColor)
                     )
                     
                     OutlinedTextField(

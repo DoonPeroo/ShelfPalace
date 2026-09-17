@@ -68,6 +68,7 @@ fun AddEditMovieScreen(
     repository: MovieRepository,
     onSave: (String) -> Unit,
     onBack: () -> Unit,
+    onClose: () -> Unit = onBack,
     @Suppress("UNUSED_PARAMETER") onHome: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -258,6 +259,13 @@ fun AddEditMovieScreen(
                 },
                 navigationIcon = {
                     NeonBackButton(onClick = onBack, modifier = Modifier.padding(start = 8.dp))
+                },
+                actions = {
+                    NeonIconButton(
+                        iconPainter = painterResource(id = R.drawable.ic_close),
+                        onClick = onClose,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )

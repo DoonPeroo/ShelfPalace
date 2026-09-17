@@ -46,8 +46,10 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.IntSize
 import android.graphics.Bitmap
 import android.graphics.RectF
+import androidx.compose.ui.platform.LocalContext
 import com.example.shelfpalace.util.StorageUtil
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.shelfpalace.R
 import com.example.shelfpalace.data.CornerStyle
 import com.example.shelfpalace.data.Game
@@ -751,8 +753,23 @@ fun MediaGridItemCard(
                     .aspectRatio(aspectRatio)
                     .clip(getAppCorners(12.dp))
             ) {
+                val context = LocalContext.current
+                val imageModel = remember(coverUri, title) {
+                    val url = coverUri.ifEmpty { "https://via.placeholder.com/150x200?text=$title" }
+                    if (url.startsWith("http://") || url.startsWith("https://")) {
+                        ImageRequest.Builder(context)
+                            .data(url)
+                            .addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 13; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36")
+                            .addHeader("Referer", "https://www.discogs.com/")
+                            .crossfade(true)
+                            .build()
+                    } else {
+                        url
+                    }
+                }
+
                 AsyncImage(
-                    model = coverUri.ifEmpty { "https://via.placeholder.com/150x200?text=$title" },
+                    model = imageModel,
                     contentDescription = title,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = contentScale

@@ -46,7 +46,7 @@ sealed interface Destinations {
     data class MusicDetail(val musicId: String) : Destinations
 
     @Serializable
-    data class AddEditMusic(val formatId: String? = null, val musicId: String? = null) : Destinations
+    data class AddEditMusic(val formatId: String? = null, val musicId: String? = null, val discogsId: Long? = null) : Destinations
 
     @Serializable
     data object Scanner : Destinations
@@ -65,4 +65,15 @@ sealed interface Destinations {
 
     @Serializable
     data class IgdbSearch(val platformId: String? = null, val gameId: String? = null, val initialQuery: String? = null) : Destinations
+
+    @Serializable
+    data class DiscogsSearch(
+        val formatId: String? = null,
+        val musicId: String? = null,
+        val initialQuery: String? = null,
+        val initialFormat: String? = null,
+        val initialLabel: String? = null,
+        val initialCountry: String? = null,
+        val initialYear: String? = null
+    ) : Destinations
 }

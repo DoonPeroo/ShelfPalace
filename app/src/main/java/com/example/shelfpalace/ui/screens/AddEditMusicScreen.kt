@@ -1,5 +1,9 @@
 package com.example.shelfpalace.ui.screens
 
+import android.Manifest
+import android.graphics.Bitmap
+import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
@@ -18,33 +22,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.shelfpalace.R
 import com.example.shelfpalace.data.Music
 import com.example.shelfpalace.data.MusicRepository
+import com.example.shelfpalace.data.remote.DiscogsService
 import com.example.shelfpalace.ui.components.*
-import com.example.shelfpalace.ui.theme.SynthwaveDark
 import com.example.shelfpalace.util.DateUtils
 import com.example.shelfpalace.util.StorageUtil
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.toSize
-import android.graphics.Bitmap
-import android.graphics.RectF
-import android.widget.Toast
-import androidx.compose.ui.res.painterResource
 import com.example.shelfpalace.util.StorageUtil.cropBitmap
 import com.example.shelfpalace.util.StorageUtil.loadBitmapFromUri
 import com.example.shelfpalace.util.StorageUtil.saveBitmapToShelfPalaceDir
@@ -62,9 +51,12 @@ import java.util.UUID
 fun AddEditMusicScreen(
     formatId: String?,
     musicId: String?,
+    discogsId: Long? = null,
     repository: MusicRepository,
     onSave: (String) -> Unit,
+    onDiscogsSearch: (query: String, format: String, label: String, year: String) -> Unit = { _, _, _, _ -> },
     onBack: () -> Unit,
+    onClose: () -> Unit = onBack,
     @Suppress("UNUSED_PARAMETER") onHome: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -82,6 +74,7 @@ fun AddEditMusicScreen(
     var isFavorite by rememberSaveable { mutableStateOf(false) }
     var purchaseDate by rememberSaveable { mutableStateOf("") }
     var pricePaid by rememberSaveable { mutableStateOf("") }
+    var currentDiscogsId by rememberSaveable { mutableStateOf<Long?>(discogsId) }
     var dateAdded by rememberSaveable { mutableLongStateOf(System.currentTimeMillis()) }
     var tempImageUriString by rememberSaveable { mutableStateOf<String?>(null) }
     var bitmapToCrop by remember { mutableStateOf<Bitmap?>(null) }
@@ -89,21 +82,15 @@ fun AddEditMusicScreen(
     var showDuplicateDialog by remember { mutableStateOf(false) }
     var shouldLaunchCamera by rememberSaveable { mutableStateOf(false) }
     
-    val cameraPermissionState = rememberPermissionState(android.Manifest.permission.CAMERA)
+    val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
     
     var selectedDay by rememberSaveable { mutableStateOf("") }
     var selectedMonth by rememberSaveable { mutableStateOf("") }
     var selectedYear by rememberSaveable { mutableStateOf("") }
-    var dayExpanded by remember { mutableStateOf(false) }
-    var monthExpanded by remember { mutableStateOf(false) }
-    var yearExpanded by remember { mutableStateOf(false) }
 
     var selectedPurchaseDay by rememberSaveable { mutableStateOf("") }
     var selectedPurchaseMonth by rememberSaveable { mutableStateOf("") }
     var selectedPurchaseYear by rememberSaveable { mutableStateOf("") }
-    var purchaseDayExpanded by remember { mutableStateOf(false) }
-    var purchaseMonthExpanded by remember { mutableStateOf(false) }
-    var purchaseYearExpanded by remember { mutableStateOf(false) }
     
     val scope = rememberCoroutineScope()
     val isEditMode = musicId != null
@@ -178,7 +165,7 @@ fun AddEditMusicScreen(
             tempImageUriString?.let { uriString ->
                 scope.launch {
                     val bitmap = withContext(Dispatchers.IO) {
-                        loadBitmapFromUri(context, android.net.Uri.parse(uriString))
+                        loadBitmapFromUri(context, Uri.parse(uriString))
                     }
                     if (bitmap != null) {
                         bitmapToCrop = bitmap
@@ -229,6 +216,78 @@ fun AddEditMusicScreen(
         }
     }
 
+    LaunchedEffect(discogsId) {
+        if (discogsId != null) {
+            currentDiscogsId = discogsId
+            val release = withContext(Dispatchers.IO) {
+                DiscogsService.getReleaseById(discogsId)
+            }
+            release?.let {
+                val parsedArtist = it.artists?.joinToString(", ") { a ->
+                    a.name?.replace(Regex("""\s*\(\d+\)$"""), "") ?: ""
+                }?.trim() ?: ""
+
+                if (!it.title.isNullOrBlank()) title = it.title
+                if (parsedArtist.isNotBlank()) artist = parsedArtist
+
+                val genresList = (it.genres ?: emptyList()) + (it.styles ?: emptyList())
+                if (genresList.isNotEmpty()) {
+                    genre = genresList.distinct().joinToString(", ")
+                }
+
+                it.labels?.firstOrNull()?.name?.let { l ->
+                    if (l.isNotBlank()) label = l
+                }
+
+                val yearStr = it.year?.toString() ?: it.released?.take(4) ?: ""
+                if (yearStr.isNotBlank()) {
+                    selectedYear = yearStr
+                    val parts = (it.released ?: "").split("-")
+                    if (parts.size >= 2 && parts[1].isNotBlank()) selectedMonth = parts[1].padStart(2, '0')
+                    if (parts.size >= 3 && parts[2].isNotBlank()) selectedDay = parts[2].padStart(2, '0')
+                    releaseDate = if (selectedMonth.isNotBlank() && selectedDay.isNotBlank()) {
+                        "$selectedYear-$selectedMonth-$selectedDay"
+                    } else if (selectedMonth.isNotBlank()) {
+                        "$selectedYear-$selectedMonth-01"
+                    } else {
+                        "$selectedYear-01-01"
+                    }
+                    displayDate = DateUtils.formatDisplayDate(releaseDate)
+                }
+
+                if (!it.tracklist.isNullOrEmpty()) {
+                    val tracksText = it.tracklist.mapNotNull { track ->
+                        val pos = track.position?.takeIf { p -> p.isNotBlank() }?.let { p -> "$p. " } ?: ""
+                        val trackTitle = track.title?.takeIf { t -> t.isNotBlank() } ?: return@mapNotNull null
+                        val dur = track.duration?.takeIf { d -> d.isNotBlank() }?.let { d -> " ($d)" } ?: ""
+                        "$pos$trackTitle$dur"
+                    }.joinToString("\n")
+                    if (tracksText.isNotBlank()) {
+                        description = "Tracklist:\n$tracksText"
+                    }
+                }
+
+                val primaryUri = it.images?.firstOrNull { img -> img.type == "primary" }?.uri
+                    ?: it.images?.firstOrNull()?.uri
+                    ?: it.images?.firstOrNull()?.resourceUrl
+
+                var bestCoverUrl = primaryUri
+                if (bestCoverUrl.isNullOrBlank() || bestCoverUrl.contains("spacer.gif")) {
+                    bestCoverUrl = withContext(Dispatchers.IO) {
+                        DiscogsService.fetchAlbumCoverFallback(artist, title, discogsId)
+                    }
+                }
+
+                if (!bestCoverUrl.isNullOrBlank()) {
+                    val localUri = withContext(Dispatchers.IO) {
+                        StorageUtil.downloadAndSaveImage(context, bestCoverUrl)
+                    }
+                    coverUri = localUri?.toString() ?: bestCoverUrl
+                }
+            }
+        }
+    }
+
     LaunchedEffect(cameraPermissionState.status, shouldLaunchCamera) {
         if (cameraPermissionState.status.isGranted && shouldLaunchCamera) {
             shouldLaunchCamera = false
@@ -267,6 +326,14 @@ fun AddEditMusicScreen(
                 navigationIcon = {
                     NeonBackButton(onClick = onBack, modifier = Modifier.padding(start = 8.dp), color = musicColor)
                 },
+                actions = {
+                    NeonIconButton(
+                        iconPainter = painterResource(id = R.drawable.ic_close),
+                        onClick = onClose,
+                        modifier = Modifier.padding(end = 8.dp),
+                        color = musicColor
+                    )
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         },
@@ -285,6 +352,30 @@ fun AddEditMusicScreen(
                 padding = 12.dp
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    NeonButton(
+                        text = if (isEditMode) "UPDATE DATA VIA DISCOGS" else "IMPORT FROM DISCOGS",
+                        icon = Icons.Rounded.Language,
+                        onClick = {
+                            val initialQuery = when {
+                                artist.isNotBlank() && title.isNotBlank() -> "$artist $title"
+                                title.isNotBlank() -> title
+                                else -> artist
+                            }
+                            val mappedFormat = when (currentFormatId.lowercase()) {
+                                "vinyl" -> "Vinyl"
+                                "cd" -> "CD"
+                                "cassette" -> "Cassette"
+                                else -> ""
+                            }
+                            val yearPart = selectedYear.ifBlank { releaseDate.take(4) }
+                            onDiscogsSearch(initialQuery, mappedFormat, label, yearPart)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        color = musicColor,
+                        height = 40.dp
+                    )
+
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
                     OutlinedTextField(
                         value = title,
                         onValueChange = { title = it },
@@ -430,7 +521,7 @@ fun AddEditMusicScreen(
                         onClick = {
                             scope.launch {
                                 val bitmap = withContext(Dispatchers.IO) {
-                                    loadBitmapFromUri(context, android.net.Uri.parse(coverUri))
+                                    loadBitmapFromUri(context, Uri.parse(coverUri))
                                 }
                                 if (bitmap != null) {
                                     bitmapToCrop = bitmap
@@ -449,8 +540,21 @@ fun AddEditMusicScreen(
                     color = musicColor,
                     padding = 8.dp
                 ) {
+                    val previewImageModel = remember(coverUri) {
+                        if (coverUri.startsWith("http://") || coverUri.startsWith("https://")) {
+                            ImageRequest.Builder(context)
+                                .data(coverUri)
+                                .addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 13; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36")
+                                .addHeader("Referer", "https://www.discogs.com/")
+                                .crossfade(true)
+                                .build()
+                        } else {
+                            coverUri
+                        }
+                    }
+
                     AsyncImage(
-                        model = coverUri,
+                        model = previewImageModel,
                         contentDescription = "Cover Preview",
                         modifier = Modifier
                             .fillMaxWidth()

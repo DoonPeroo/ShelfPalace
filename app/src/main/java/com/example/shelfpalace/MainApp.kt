@@ -477,7 +477,8 @@ fun MainApp(
                                 )
                             )
                         },
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStack() },
+                        onClose = { navController.popBackStack() }
                     )
                 }
                 
@@ -493,12 +494,12 @@ fun MainApp(
                                     gameId = route.gameId, 
                                     igdbId = igdbId
                                 )
-                            )
+                            ) {
+                                popUpTo<Destinations.AddEditGame> { inclusive = true }
+                            }
                         },
                         onBack = { navController.popBackStack() },
-                        onClose = {
-                            navController.popBackStack()
-                        }
+                        onClose = { navController.popBackStack() }
                     )
                 }
                 
@@ -596,6 +597,7 @@ fun MainApp(
                             }
                         },
                         onBack = { navController.popBackStack() },
+                        onClose = { navController.popBackStack() },
                         onHome = { 
                             navController.popBackStack(Destinations.LibraryDashboard, false)
                         }
@@ -667,6 +669,7 @@ fun MainApp(
                     AddEditMusicScreen(
                         formatId = route.formatId,
                         musicId = route.musicId,
+                        discogsId = route.discogsId,
                         repository = musicRepository,
                         onSave = { savedMusicId ->
                             navController.popBackStack<Destinations.AddEditMusic>(inclusive = true)
@@ -674,10 +677,48 @@ fun MainApp(
                                 navController.navigate(Destinations.MusicDetail(savedMusicId))
                             }
                         },
+                        onDiscogsSearch = { currentTitle, currentFormat, currentLabel, currentYear ->
+                            navController.navigate(
+                                Destinations.DiscogsSearch(
+                                    formatId = route.formatId,
+                                    musicId = route.musicId,
+                                    initialQuery = currentTitle,
+                                    initialFormat = currentFormat,
+                                    initialLabel = currentLabel,
+                                    initialYear = currentYear
+                                )
+                            )
+                        },
                         onBack = { navController.popBackStack() },
+                        onClose = { navController.popBackStack() },
                         onHome = { 
                             navController.popBackStack<Destinations.AddEditMusic>(inclusive = true)
                         }
+                    )
+                }
+
+                composable<Destinations.DiscogsSearch> { backStackEntry ->
+                    val route: Destinations.DiscogsSearch = backStackEntry.toRoute()
+                    DiscogsSearchScreen(
+                        formatId = route.formatId,
+                        initialQuery = route.initialQuery,
+                        initialFormat = route.initialFormat,
+                        initialLabel = route.initialLabel,
+                        initialCountry = route.initialCountry,
+                        initialYear = route.initialYear,
+                        onMusicSelected = { discogsId: Long ->
+                            navController.navigate(
+                                Destinations.AddEditMusic(
+                                    formatId = route.formatId,
+                                    musicId = route.musicId,
+                                    discogsId = discogsId
+                                )
+                            ) {
+                                popUpTo<Destinations.AddEditMusic> { inclusive = true }
+                            }
+                        },
+                        onBack = { navController.popBackStack() },
+                        onClose = { navController.popBackStack() }
                     )
                 }
                 

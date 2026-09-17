@@ -55,6 +55,7 @@ import com.example.shelfpalace.ui.theme.DarkBackground
 import com.example.shelfpalace.util.DateUtils
 import com.example.shelfpalace.util.StorageUtil
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.request.ImageRequest
 import com.example.shelfpalace.data.remote.IgdbVideo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -200,8 +201,22 @@ fun MusicDetailScreen(
                             .padding(horizontal = 20.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        val coverModel = remember(currentMusic.coverUri, currentMusic.title) {
+                            val url = currentMusic.coverUri.ifEmpty { "https://via.placeholder.com/400x400?text=${currentMusic.title}" }
+                            if (url.startsWith("http://") || url.startsWith("https://")) {
+                                ImageRequest.Builder(context)
+                                    .data(url)
+                                    .addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 13; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36")
+                                    .addHeader("Referer", "https://www.discogs.com/")
+                                    .crossfade(true)
+                                    .build()
+                            } else {
+                                url
+                            }
+                        }
+
                         AsyncImage(
-                            model = currentMusic.coverUri.ifEmpty { "https://via.placeholder.com/400x400?text=${currentMusic.title}" },
+                            model = coverModel,
                             contentDescription = currentMusic.title,
                             modifier = Modifier
                                 .width(185.dp)
@@ -446,7 +461,7 @@ fun MusicMediaTab(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Rounded.CloudOff, contentDescription = null, tint = Color.White.copy(alpha = 0.2f), modifier = Modifier.size(36.dp))
                         Spacer(modifier = Modifier.height(6.dp))
-                        Text("No Discogs media available", color = Color.White.copy(alpha = 0.4f))
+                        Text("No online media available", color = Color.White.copy(alpha = 0.4f))
                     }
                 }
             } else {
@@ -456,7 +471,7 @@ fun MusicMediaTab(
                     itemsIndexed(screenshots) { index, url ->
                         AsyncImage(
                             model = url,
-                            contentDescription = "Discogs Media",
+                            contentDescription = "Media",
                             modifier = Modifier
                                 .size(160.dp)
                                 .clip(getAppCorners(12.dp))
@@ -585,22 +600,26 @@ fun MusicDetailsTab(
                 onClick = null
             )
             HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
-            DetailRow(
-                icon = Icons.Rounded.ShoppingBag,
-                label = "Purchased on",
-                value = if (music.purchaseDate.isNotBlank()) DateUtils.formatDisplayDate(music.purchaseDate).ifEmpty { music.purchaseDate } else "(None)",
-                color = accentColor,
-                onClick = null
-            )
-            HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
-            DetailRow(
-                icon = Icons.Rounded.AttachMoney,
-                label = "Paid",
-                value = music.pricePaid.ifBlank { "(None)" },
-                color = accentColor,
-                onClick = null
-            )
-            HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
+            if (music.purchaseDate.isNotBlank()) {
+                DetailRow(
+                    icon = Icons.Rounded.ShoppingBag,
+                    label = "Purchased on",
+                    value = DateUtils.formatDisplayDate(music.purchaseDate).ifEmpty { music.purchaseDate },
+                    color = accentColor,
+                    onClick = null
+                )
+                HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
+            }
+            if (music.pricePaid.isNotBlank()) {
+                DetailRow(
+                    icon = Icons.Rounded.AttachMoney,
+                    label = "Paid",
+                    value = music.pricePaid,
+                    color = accentColor,
+                    onClick = null
+                )
+                HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
+            }
             DetailRow(
                 icon = Icons.AutoMirrored.Rounded.Notes,
                 label = "Notes",

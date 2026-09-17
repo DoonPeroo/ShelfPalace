@@ -16,6 +16,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
+import java.net.HttpURLConnection
 import java.net.URL
 import java.util.UUID
 import java.util.zip.ZipEntry
@@ -46,7 +47,11 @@ object StorageUtil {
     suspend fun downloadAndSaveImage(context: Context, urlString: String): Uri? = withContext(Dispatchers.IO) {
         try {
             val url = URL(urlString)
-            val connection = url.openConnection()
+            val connection = url.openConnection() as HttpURLConnection
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36")
+            connection.setRequestProperty("Referer", "https://www.discogs.com/")
+            connection.setRequestProperty("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
+            connection.instanceFollowRedirects = true
             connection.doInput = true
             val inputStream = connection.getInputStream()
             val fileName = "cover_${UUID.randomUUID()}.webp"

@@ -740,22 +740,26 @@ fun GameMyDetailsTab(
                 onClick = null
             )
             HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
-            DetailRow(
-                icon = Icons.Rounded.ShoppingBag,
-                label = "Purchased on",
-                value = if (game.purchaseDate.isNotBlank()) DateUtils.formatDisplayDate(game.purchaseDate).ifEmpty { game.purchaseDate } else "(None)",
-                color = accentColor,
-                onClick = null
-            )
-            HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
-            DetailRow(
-                icon = Icons.Rounded.AttachMoney,
-                label = "Paid",
-                value = game.pricePaid.ifBlank { "(None)" },
-                color = accentColor,
-                onClick = null
-            )
-            HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
+            if (game.purchaseDate.isNotBlank()) {
+                DetailRow(
+                    icon = Icons.Rounded.ShoppingBag,
+                    label = "Purchased on",
+                    value = DateUtils.formatDisplayDate(game.purchaseDate).ifEmpty { game.purchaseDate },
+                    color = accentColor,
+                    onClick = null
+                )
+                HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
+            }
+            if (game.pricePaid.isNotBlank()) {
+                DetailRow(
+                    icon = Icons.Rounded.AttachMoney,
+                    label = "Paid",
+                    value = game.pricePaid,
+                    color = accentColor,
+                    onClick = null
+                )
+                HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
+            }
             DetailRow(
                 icon = Icons.AutoMirrored.Rounded.Notes,
                 label = "Notes",

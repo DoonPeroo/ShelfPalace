@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -144,8 +145,28 @@ fun SearchScreen(
                             .padding(vertical = 4.dp)
                             .focusRequester(focusRequester),
                         placeholder = { Text(stringResource(R.string.msg_search_all_games)) },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(id = R.drawable.search),
+                                contentDescription = "Search",
+                                tint = Color.White.copy(alpha = 0.6f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_close),
+                                        contentDescription = "Clear",
+                                        tint = Color.White.copy(alpha = 0.6f),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        },
                         singleLine = true,
-                        shape = getAppCorners(8.dp),
+                        shape = getAppCorners(),
                         colors = synthwaveTextFieldColors(),
                         textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.White)
                     )

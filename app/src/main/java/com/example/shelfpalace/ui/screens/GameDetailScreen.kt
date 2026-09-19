@@ -1,6 +1,9 @@
 package com.example.shelfpalace.ui.screens
 
+import android.app.Activity
+import android.content.ContextWrapper
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
 import android.net.Uri
 import android.view.View
@@ -31,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -177,7 +181,7 @@ fun GameDetailScreen(
 
                     Spacer(modifier = Modifier.width(4.dp))
 
-                    val headerCorners = 12.dp
+                    val headerCorners = 24.dp
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -779,6 +783,16 @@ fun VideoPlayerDialog(
     onDismissRequest: () -> Unit,
     accentColor: Color
 ) {
+    val context = LocalContext.current
+    val activity = remember(context) {
+        var ctx = context
+        while (ctx is ContextWrapper) {
+            if (ctx is Activity) return@remember ctx
+            ctx = ctx.baseContext
+        }
+        null
+    }
+
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     var isFullscreen by remember { mutableStateOf(false) }
@@ -786,6 +800,17 @@ fun VideoPlayerDialog(
 
     var customView by remember { mutableStateOf<View?>(null) }
     var customViewCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
+
+    DisposableEffect(isFullscreen, customView) {
+        if (isFullscreen || customView != null) {
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        } else {
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+        onDispose {
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
 
     if (customView != null) {
         Dialog(
@@ -818,6 +843,99 @@ fun VideoPlayerDialog(
         }
     }
 
+    val webView = remember(videoId) {
+        WebView(context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            settings.allowFileAccess = true
+            settings.allowContentAccess = true
+            settings.mediaPlaybackRequiresUserGesture = false
+            settings.useWideViewPort = true
+            settings.loadWithOverviewMode = true
+            settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+            settings.userAgentString = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+            webChromeClient = object : WebChromeClient() {
+                override fun getDefaultVideoPoster(): Bitmap {
+                    return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+                }
+
+                override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
+                    super.onShowCustomView(view, callback)
+                    customView = view
+                    customViewCallback = callback
+                    postDelayed({
+                        evaluateJavascript("javascript:(function() { var p = document.getElementById('player'); if (p && p.contentWindow) { p.contentWindow.postMessage('{\"event\":\"command\",\"func\":\"playVideo\",\"args\":\"\"}', '*'); } })()", null)
+                    }, 150)
+                }
+
+                override fun onHideCustomView() {
+                    super.onHideCustomView()
+                    try {
+                        customViewCallback?.onCustomViewHidden()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    customView = null
+                    customViewCallback = null
+                    postDelayed({
+                        evaluateJavascript("javascript:(function() { var p = document.getElementById('player'); if (p && p.contentWindow) { p.contentWindow.postMessage('{\"event\":\"command\",\"func\":\"playVideo\",\"args\":\"\"}', '*'); } })()", null)
+                    }, 150)
+                }
+            }
+            webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                    val url = request?.url?.toString() ?: return false
+                    if (url.startsWith("intent:") || url.startsWith("vnd.youtube:") || url.startsWith("market:")) {
+                        return true
+                    }
+                    return false
+                }
+            }
+
+            val htmlData = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                <style>
+                  * { margin: 0; padding: 0; box-sizing: border-box; }
+                  html, body { width: 100vw; height: 100vh; background-color: #000000; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+                  .video-container { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+                  iframe { width: 100%; height: 100%; border: 0; }
+                </style>
+                </head>
+                <body>
+                  <div class="video-container">
+                    <iframe id="player"
+                            src="https://www.youtube-nocookie.com/embed/$videoId?autoplay=1&playsinline=1&controls=1&enablejsapi=1"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowfullscreen></iframe>
+                  </div>
+                </body>
+                </html>
+            """.trimIndent()
+
+            loadDataWithBaseURL("https://www.youtube-nocookie.com", htmlData, "text/html", "UTF-8", null)
+        }
+    }
+
+    DisposableEffect(videoId) {
+        onDispose {
+            try {
+                webView.stopLoading()
+                webView.loadUrl("about:blank")
+                webView.destroy()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     Dialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
@@ -825,178 +943,95 @@ fun VideoPlayerDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.95f))
-                .padding(if (effectiveFullscreen) 0.dp else 16.dp),
+                .background(if (effectiveFullscreen) Color.Black else Color.Black.copy(alpha = 0.95f)),
             contentAlignment = Alignment.Center
         ) {
-            Column(
-                modifier = if (effectiveFullscreen) Modifier.fillMaxSize() else Modifier.fillMaxWidth().wrapContentHeight(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Header Bar
-                Row(
-                    modifier = Modifier
+            // Single AndroidView instance - stays composed during fullscreen toggle!
+            AndroidView(
+                factory = { webView },
+                modifier = if (effectiveFullscreen) {
+                    Modifier.fillMaxSize()
+                } else {
+                    Modifier
+                        .padding(horizontal = 16.dp, vertical = 60.dp)
                         .fillMaxWidth()
-                        .then(
-                            if (effectiveFullscreen) {
-                                if (isLandscape) {
-                                    Modifier
-                                        .statusBarsPadding()
-                                        .padding(horizontal = 12.dp, vertical = 4.dp)
-                                } else {
-                                    Modifier
-                                        .statusBarsPadding()
-                                        .padding(top = 16.dp, bottom = 8.dp, start = 16.dp, end = 16.dp)
-                                }
-                            } else {
-                                Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
-                            }
-                        ),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = videoTitle,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    NeonIconButton(
-                        icon = if (isFullscreen) Icons.Rounded.FullscreenExit else Icons.Rounded.Fullscreen,
-                        onClick = { isFullscreen = !isFullscreen },
-                        color = accentColor,
-                        size = 36.dp
-                    )
-
-                    Spacer(modifier = Modifier.width(6.dp))
-
-                    NeonIconButton(
-                        iconPainter = painterResource(id = R.drawable.ic_close),
-                        onClick = onDismissRequest,
-                        color = accentColor,
-                        size = 36.dp
-                    )
+                        .aspectRatio(16f / 9f)
+                        .clip(getAppCorners(12.dp))
+                        .border(1.dp, accentColor, getAppCorners(12.dp))
+                },
+                update = { view ->
+                    view.requestLayout()
+                    view.invalidate()
+                    view.postDelayed({
+                        view.evaluateJavascript("javascript:window.dispatchEvent(new Event('resize'));", null)
+                    }, 100)
                 }
+            )
 
-                if (!effectiveFullscreen) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-
-                val context = LocalContext.current
-                val webView = remember(videoId) {
-                    WebView(context).apply {
-                        layoutParams = ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
-                        )
-                        setLayerType(View.LAYER_TYPE_HARDWARE, null)
-                        settings.javaScriptEnabled = true
-                        settings.domStorageEnabled = true
-                        settings.allowFileAccess = true
-                        settings.allowContentAccess = true
-                        settings.mediaPlaybackRequiresUserGesture = false
-                        settings.useWideViewPort = true
-                        settings.loadWithOverviewMode = true
-                        settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                        settings.userAgentString = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
-                        webChromeClient = object : WebChromeClient() {
-                            override fun getDefaultVideoPoster(): Bitmap {
-                                return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
-                            }
-
-                            override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
-                                super.onShowCustomView(view, callback)
-                                customView = view
-                                customViewCallback = callback
-                                postDelayed({
-                                    evaluateJavascript("javascript:(function() { var p = document.getElementById('player'); if (p && p.contentWindow) { p.contentWindow.postMessage('{\"event\":\"command\",\"func\":\"playVideo\",\"args\":\"\"}', '*'); } })()", null)
-                                }, 150)
-                            }
-
-                            override fun onHideCustomView() {
-                                super.onHideCustomView()
-                                try {
-                                    customViewCallback?.onCustomViewHidden()
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                }
-                                customView = null
-                                customViewCallback = null
-                                postDelayed({
-                                    evaluateJavascript("javascript:(function() { var p = document.getElementById('player'); if (p && p.contentWindow) { p.contentWindow.postMessage('{\"event\":\"command\",\"func\":\"playVideo\",\"args\":\"\"}', '*'); } })()", null)
-                                }, 150)
-                            }
+            // Header Bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .background(
+                        if (effectiveFullscreen) {
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Black.copy(alpha = 0.85f),
+                                    Color.Black.copy(alpha = 0.4f),
+                                    Color.Transparent
+                                )
+                            )
+                        } else {
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Black.copy(alpha = 0.7f),
+                                    Color.Transparent
+                                )
+                            )
                         }
-                        webViewClient = object : WebViewClient() {
-                            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                                val url = request?.url?.toString() ?: return false
-                                if (url.startsWith("intent:") || url.startsWith("vnd.youtube:") || url.startsWith("market:")) {
-                                    return true
-                                }
-                                return false
-                            }
-                        }
+                    )
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = videoTitle,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
 
-                        val htmlData = """
-                            <!DOCTYPE html>
-                            <html>
-                            <head>
-                            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-                            <style>
-                              * { margin: 0; padding: 0; box-sizing: border-box; }
-                              html, body { width: 100%; height: 100%; background-color: #000000; overflow: hidden; }
-                              .video-container { position: relative; width: 100%; height: 100%; }
-                              iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
-                            </style>
-                            </head>
-                            <body>
-                              <div class="video-container">
-                                <iframe id="player"
-                                        src="https://www.youtube-nocookie.com/embed/$videoId?autoplay=1&playsinline=1&controls=1&enablejsapi=1"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                        allowfullscreen></iframe>
-                              </div>
-                            </body>
-                            </html>
-                        """.trimIndent()
-
-                        loadDataWithBaseURL("https://www.youtube-nocookie.com", htmlData, "text/html", "UTF-8", null)
-                    }
-                }
-
-                NeonCard(
-                    modifier = if (effectiveFullscreen) Modifier.fillMaxWidth().weight(1f) else Modifier.fillMaxWidth().aspectRatio(16f / 9f),
+                NeonIconButton(
+                    icon = if (isFullscreen) Icons.Rounded.FullscreenExit else Icons.Rounded.Fullscreen,
+                    onClick = { isFullscreen = !isFullscreen },
                     color = accentColor,
-                    padding = 0.dp
+                    size = 36.dp
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                NeonIconButton(
+                    iconPainter = painterResource(id = R.drawable.ic_close),
+                    onClick = onDismissRequest,
+                    color = accentColor,
+                    size = 36.dp
+                )
+            }
+
+            if (!effectiveFullscreen) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(16.dp)
                 ) {
-                    AndroidView(
-                        factory = { webView },
-                        update = { view ->
-                            view.requestLayout()
-                            view.invalidate()
-                            view.postDelayed({
-                                view.evaluateJavascript("javascript:(function() { var p = document.getElementById('player'); if (p && p.contentWindow) { p.contentWindow.postMessage('{\"event\":\"command\",\"func\":\"playVideo\",\"args\":\"\"}', '*'); } })()", null)
-                            }, 150)
-                        },
-                        onRelease = { view ->
-                            view.stopLoading()
-                            view.loadUrl("about:blank")
-                            view.destroy()
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-
-                if (!effectiveFullscreen) {
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    val context = LocalContext.current
                     NeonButton(
                         text = "OPEN IN YOUTUBE",
                         icon = Icons.AutoMirrored.Rounded.OpenInNew,

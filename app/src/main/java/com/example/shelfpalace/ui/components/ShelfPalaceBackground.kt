@@ -11,6 +11,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.shelfpalace.R
+import com.example.shelfpalace.data.AppTheme
+import com.example.shelfpalace.ui.theme.LocalAppTheme
+import com.example.shelfpalace.ui.theme.LoadedDarkNavy
 import com.example.shelfpalace.ui.theme.ShelfPalaceTheme
 
 @Composable
@@ -18,6 +21,7 @@ fun ShelfPalaceBackground(
     modifier: Modifier = Modifier,
     scrimColor: Color = Color(0xFF121216).copy(alpha = 0.25f)
 ) {
+    val currentTheme = LocalAppTheme.current
     val backgroundPic = R.drawable.background_pic
     
     Box(modifier = modifier.fillMaxSize()) {
@@ -30,7 +34,13 @@ fun ShelfPalaceBackground(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(scrimColor)
+                .background(
+                    if (currentTheme == AppTheme.CYBER_GREEN) {
+                        LoadedDarkNavy.copy(alpha = 0.92f)
+                    } else {
+                        scrimColor
+                    }
+                )
         )
     }
 }

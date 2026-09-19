@@ -130,7 +130,7 @@ fun IgdbSearchScreen(
                     )
                 },
                 singleLine = true,
-                shape = getAppCorners(8.dp),
+                shape = getAppCorners(),
                 colors = synthwaveTextFieldColors()
             )
 

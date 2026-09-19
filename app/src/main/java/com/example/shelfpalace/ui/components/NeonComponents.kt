@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material.icons.Icons
@@ -51,12 +52,17 @@ import com.example.shelfpalace.util.StorageUtil
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.shelfpalace.R
+import com.example.shelfpalace.data.AppTheme
 import com.example.shelfpalace.data.CornerStyle
 import com.example.shelfpalace.data.Game
 import com.example.shelfpalace.data.Movie
 import com.example.shelfpalace.data.Music
 import com.example.shelfpalace.data.SortOption
+import com.example.shelfpalace.ui.theme.LocalAppTheme
 import com.example.shelfpalace.ui.theme.LocalCornerStyle
+import com.example.shelfpalace.ui.theme.LoadedCardBorder
+import com.example.shelfpalace.ui.theme.LoadedEmeraldGreen
+import com.example.shelfpalace.ui.theme.LoadedSurfaceNavy
 import com.example.shelfpalace.ui.theme.SynthwaveDark
 import com.example.shelfpalace.ui.theme.SynthwaveLavender
 import com.example.shelfpalace.util.PlatformUtils
@@ -64,13 +70,21 @@ import java.util.Calendar
 import kotlin.math.abs
 
 @Composable
-fun getAppCorners(default: androidx.compose.ui.unit.Dp = 8.dp): RoundedCornerShape {
-    return if (LocalCornerStyle.current == CornerStyle.ROUNDED) RoundedCornerShape(default) else RoundedCornerShape(0.dp)
+fun getAppCorners(default: Dp = 20.dp): RoundedCornerShape {
+    return when (LocalCornerStyle.current) {
+        CornerStyle.ROUNDED -> RoundedCornerShape(if (default < 16.dp) 20.dp else default)
+        CornerStyle.OUTLINED -> RoundedCornerShape(6.dp)
+        CornerStyle.SQUARE -> RoundedCornerShape(0.dp)
+    }
 }
 
 @Composable
-fun getAppCornerRadius(default: androidx.compose.ui.unit.Dp): androidx.compose.ui.unit.Dp {
-    return if (LocalCornerStyle.current == CornerStyle.ROUNDED) default else 0.dp
+fun getAppCornerRadius(default: Dp = 20.dp): Dp {
+    return when (LocalCornerStyle.current) {
+        CornerStyle.ROUNDED -> if (default < 16.dp) 20.dp else default
+        CornerStyle.OUTLINED -> 6.dp
+        CornerStyle.SQUARE -> 0.dp
+    }
 }
 
 @Composable
@@ -152,7 +166,7 @@ fun NeonButton(
             contentColor = finalContentColor
         ),
         shape = getAppCorners(radius),
-        border = BorderStroke(if (isPressed) 1.5.dp else 1.dp, finalBorderColor),
+        border = BorderStroke(2.dp, finalBorderColor),
         contentPadding = contentPadding
     ) {
         Row(
@@ -203,17 +217,21 @@ fun NeonIconButton(
     iconSize: Dp = 26.dp,
     iconModifier: Modifier = Modifier
 ) {
-    val radius = 12.dp
+    val isCyberGreen = LocalAppTheme.current == AppTheme.CYBER_GREEN
+    val isRounded = LocalCornerStyle.current == CornerStyle.ROUNDED
+
+    val defaultBg = if (isCyberGreen) LoadedSurfaceNavy.copy(alpha = 0.8f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
+    val defaultTint = if (isCyberGreen) LoadedEmeraldGreen else color
+    val defaultBorder = if (isCyberGreen) LoadedEmeraldGreen.copy(alpha = 0.6f) else color.copy(alpha = 0.5f)
+
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    
-    val pressedHighlight = Color(0xFF8A91AB)
-    val isNeutral = abs(color.red - color.green) < 0.1f && abs(color.green - color.blue) < 0.1f
-    val highlightColor = if (isPressed && isNeutral) pressedHighlight else color
 
-    val finalContainerColor = if (isPressed) highlightColor.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
-    val finalContentColor = if (isPressed) highlightColor else color
-    val finalBorderColor = if (isPressed) highlightColor else color.copy(alpha = 0.5f)
+    val finalContainerColor = if (isPressed) defaultBorder.copy(alpha = 0.35f) else defaultBg
+    val finalContentColor = tint ?: defaultTint
+    val finalBorderColor = if (isPressed) defaultTint else defaultBorder
+
+    val iconShape = if (isRounded) CircleShape else getAppCorners(12.dp)
 
     Surface(
         onClick = onClick,
@@ -221,21 +239,21 @@ fun NeonIconButton(
         modifier = modifier.size(size),
         color = finalContainerColor,
         contentColor = finalContentColor,
-        shape = getAppCorners(radius),
-        border = BorderStroke(if (isPressed) 1.5.dp else 1.dp, finalBorderColor)
+        shape = iconShape,
+        border = BorderStroke(2.dp, finalBorderColor)
     ) {
         Box(contentAlignment = Alignment.Center) {
             if (icon != null) {
                 Icon(
                     imageVector = icon,
                     contentDescription = contentDescription,
+                    tint = finalContentColor,
                     modifier = Modifier.size(iconSize).then(iconModifier)
                 )
             } else if (iconPainter != null) {
-                Icon(
+                Image(
                     painter = iconPainter,
                     contentDescription = contentDescription,
-                    tint = tint ?: Color.Unspecified,
                     modifier = Modifier.size(iconSize).then(iconModifier)
                 )
             }
@@ -375,11 +393,27 @@ fun NeonCard(
     padding: Dp = 16.dp,
     content: @Composable () -> Unit
 ) {
-    val radius = 12.dp
+    val currentStyle = LocalCornerStyle.current
+    val currentTheme = LocalAppTheme.current
+
+    val radius = when (currentStyle) {
+        CornerStyle.ROUNDED -> 20.dp
+        CornerStyle.OUTLINED -> 6.dp
+        CornerStyle.SQUARE -> 0.dp
+    }
+    val borderWidth = 2.dp
+
+    val (cardBackground, borderColor) = if (currentTheme == AppTheme.CYBER_GREEN) {
+        LoadedSurfaceNavy.copy(alpha = 0.95f) to LoadedEmeraldGreen.copy(alpha = 0.6f)
+    } else {
+        val borderAlpha = if (currentStyle == CornerStyle.OUTLINED) 0.65f else 0.4f
+        Color.Black.copy(alpha = containerAlpha) to color.copy(alpha = borderAlpha)
+    }
+
     Box(
         modifier = modifier
-            .background(Color.Black.copy(alpha = containerAlpha), getAppCorners(radius))
-            .border(1.dp, color.copy(alpha = 0.4f), getAppCorners(radius))
+            .background(cardBackground, RoundedCornerShape(radius))
+            .border(borderWidth, borderColor, RoundedCornerShape(radius))
             .padding(padding)
     ) {
         content()
@@ -392,11 +426,11 @@ fun SectionHeader(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.secondary
 ) {
-    val radius = 8.dp
+    val radius = 24.dp
     Surface(
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
         shape = getAppCorners(radius),
-        border = BorderStroke(1.dp, color),
+        border = BorderStroke(2.dp, color),
         modifier = modifier
             .padding(vertical = 4.dp)
     ) {
@@ -419,7 +453,7 @@ fun NeonHeader(
     color: Color = MaterialTheme.colorScheme.primary,
     fullWidth: Boolean = true
 ) {
-    val radius = 12.dp
+    val radius = 24.dp
     Box(
         modifier = modifier
             .then(if (fullWidth) Modifier.fillMaxWidth() else Modifier)
@@ -429,7 +463,7 @@ fun NeonHeader(
         Surface(
             color = Color.Black.copy(alpha = 0.3f),
             shape = getAppCorners(radius),
-            border = BorderStroke(1.dp, color.copy(alpha = 0.8f))
+            border = BorderStroke(2.dp, color.copy(alpha = 0.8f))
         ) {
             Text(
                 text = text.uppercase(),
@@ -448,25 +482,35 @@ fun NeonHeader(
 @Composable
 fun synthwaveTextFieldColors(
     color: Color = MaterialTheme.colorScheme.primary
-) = OutlinedTextFieldDefaults.colors(
-    focusedTextColor = Color.White,
-    unfocusedTextColor = Color.White,
-    focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
-    unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
-    focusedBorderColor = color,
-    unfocusedBorderColor = color,
-    focusedLabelColor = color,
-    unfocusedLabelColor = color.copy(alpha = 0.6f),
-    focusedLeadingIconColor = color,
-    focusedTrailingIconColor = color,
-    unfocusedLeadingIconColor = color.copy(alpha = 0.6f),
-    unfocusedTrailingIconColor = color.copy(alpha = 0.6f),
-    cursorColor = color,
-    selectionColors = TextSelectionColors(
-        handleColor = color,
-        backgroundColor = color.copy(alpha = 0.4f)
+): TextFieldColors {
+    val isCyberGreen = LocalAppTheme.current == AppTheme.CYBER_GREEN
+    
+    val containerColor = if (isCyberGreen) LoadedSurfaceNavy.copy(alpha = 0.8f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
+    val textColor = Color.White
+    val unfocusedBorder = if (isCyberGreen) LoadedEmeraldGreen.copy(alpha = 0.6f) else color
+    val focusedBorder = if (isCyberGreen) LoadedEmeraldGreen else color
+    val iconColor = if (isCyberGreen) LoadedEmeraldGreen else color
+
+    return OutlinedTextFieldDefaults.colors(
+        focusedTextColor = textColor,
+        unfocusedTextColor = textColor,
+        focusedContainerColor = containerColor,
+        unfocusedContainerColor = containerColor,
+        focusedBorderColor = focusedBorder,
+        unfocusedBorderColor = unfocusedBorder,
+        focusedLabelColor = focusedBorder,
+        unfocusedLabelColor = unfocusedBorder,
+        focusedLeadingIconColor = iconColor,
+        focusedTrailingIconColor = iconColor,
+        unfocusedLeadingIconColor = iconColor,
+        unfocusedTrailingIconColor = iconColor,
+        cursorColor = if (isCyberGreen) Color(0xFF1A1F38) else color,
+        selectionColors = TextSelectionColors(
+            handleColor = focusedBorder,
+            backgroundColor = focusedBorder.copy(alpha = 0.4f)
+        )
     )
-)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Suppress("unused")
@@ -506,7 +550,7 @@ fun NeonToggle(
         modifier = modifier
             .height(height)
             .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f), getAppCorners(24.dp))
-            .border(1.dp, color.copy(alpha = 0.5f), getAppCorners(24.dp))
+            .border(2.dp, color.copy(alpha = 0.5f), getAppCorners(24.dp))
             .padding(padding),
         horizontalArrangement = Arrangement.spacedBy(padding)
     ) {
@@ -776,19 +820,22 @@ fun MediaGridItemCard(
                 )
 
                 if (tag.isNotEmpty() || (isFavorite && showFavoriteBadge)) {
+                    val isRounded = LocalCornerStyle.current == CornerStyle.ROUNDED
+                    val badgeShape = if (isRounded) CircleShape else getAppCorners(6.dp)
+
                     Row(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(4.dp),
+                            .padding(5.dp),
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         if (isFavorite && showFavoriteBadge) {
                             Surface(
-                                color = color.copy(alpha = 0.9f),
+                                color = color.copy(alpha = 0.95f),
                                 contentColor = Color.Black,
-                                shape = getAppCorners(6.dp),
-                                border = BorderStroke(1.dp, Color.Black)
+                                shape = badgeShape,
+                                border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.3f))
                             ) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_heart_filled),
@@ -801,18 +848,19 @@ fun MediaGridItemCard(
 
                         if (tag.isNotEmpty()) {
                             Surface(
-                                color = color.copy(alpha = 0.9f),
+                                color = color.copy(alpha = 0.95f),
                                 contentColor = Color.Black,
-                                shape = getAppCorners(6.dp),
-                                border = BorderStroke(1.dp, Color.Black)
+                                shape = badgeShape,
+                                border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.3f))
                             ) {
                                 Text(
                                     text = tag,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.Black,
                                         fontSize = 11.sp
-                                    )
+                                    ),
+                                    color = Color.Black
                                 )
                             }
                         }

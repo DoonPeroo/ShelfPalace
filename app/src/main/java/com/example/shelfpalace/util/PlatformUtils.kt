@@ -70,6 +70,7 @@ object PlatformUtils {
             "vhs" -> "VHS"
             "laserdisc" -> "LASERDISC"
             "vcd" -> "VCD"
+            "umd" -> "UMD VIDEO"
             "dvd" -> "DVD"
             "hddvd" -> "HD-DVD"
             "bluray" -> "BLU-RAY"

@@ -5,7 +5,16 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import com.example.shelfpalace.data.AppTheme
+import com.example.shelfpalace.data.CornerStyle
+import com.example.shelfpalace.ui.components.NeonIconButton
 import com.example.shelfpalace.ui.components.getAppCorners
+import com.example.shelfpalace.ui.theme.LocalAppTheme
+import com.example.shelfpalace.ui.theme.LocalCornerStyle
+import com.example.shelfpalace.ui.theme.LoadedCardBorder
+import com.example.shelfpalace.ui.theme.LoadedEmeraldGreen
+import com.example.shelfpalace.ui.theme.LoadedSurfaceNavy
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
@@ -264,6 +273,14 @@ fun SearchAndFilterRow(
     onFilterOptionSelected: (String) -> Unit
 ) {
     var filterMenuExpanded by remember { mutableStateOf(false) }
+    val isCyberGreen = LocalAppTheme.current == AppTheme.CYBER_GREEN
+    val isRounded = LocalCornerStyle.current == CornerStyle.ROUNDED
+    val searchShape = if (isRounded) CircleShape else getAppCorners()
+
+    val searchBgColor = if (isCyberGreen) LoadedSurfaceNavy.copy(alpha = 0.8f) else Color.Black.copy(alpha = 0.3f)
+    val searchBorderColor = if (isCyberGreen) LoadedEmeraldGreen.copy(alpha = 0.6f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+    val searchTextColor = Color.White
+    val searchIconTint = if (isCyberGreen) LoadedEmeraldGreen else Color.White.copy(alpha = 0.8f)
 
     Row(
         modifier = Modifier
@@ -272,24 +289,24 @@ fun SearchAndFilterRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Search Bar
-        NeonCard(
-            modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.primary,
-            containerAlpha = 0.3f,
-            padding = 0.dp
+        // Search Bar Card
+        Surface(
+            color = searchBgColor,
+            shape = searchShape,
+            border = BorderStroke(2.dp, searchBorderColor),
+            modifier = Modifier
+                .weight(1f)
+                .height(48.dp)
         ) {
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
+                    .fillMaxSize()
                     .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
+                Image(
                     painter = painterResource(id = R.drawable.search),
                     contentDescription = null,
-                    tint = Color.Unspecified,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
@@ -297,15 +314,18 @@ fun SearchAndFilterRow(
                     value = searchQuery,
                     onValueChange = onSearchQueryChange,
                     modifier = Modifier.weight(1f),
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                        color = searchTextColor,
+                        fontWeight = if (isCyberGreen) FontWeight.SemiBold else FontWeight.Normal
+                    ),
+                    cursorBrush = SolidColor(if (isCyberGreen) Color(0xFF1A1F38) else MaterialTheme.colorScheme.primary),
                     singleLine = true,
                     decorationBox = { innerTextField ->
                         if (searchQuery.isEmpty()) {
                             Text(
-                                text = "Search",
+                                text = "Search Library",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White.copy(alpha = 0.4f)
+                                color = if (isCyberGreen) Color(0xFF777777) else Color.White.copy(alpha = 0.4f)
                             )
                         }
                         innerTextField()
@@ -319,7 +339,7 @@ fun SearchAndFilterRow(
                         Icon(
                             painter = painterResource(id = R.drawable.ic_close),
                             contentDescription = "Clear",
-                            tint = Color.White.copy(alpha = 0.6f)
+                            tint = searchIconTint
                         )
                     }
                     Spacer(modifier = Modifier.width(8.dp))
@@ -329,7 +349,7 @@ fun SearchAndFilterRow(
                     modifier = Modifier
                         .width(1.dp)
                         .height(20.dp)
-                        .background(Color.White.copy(alpha = 0.2f))
+                        .background(if (isCyberGreen) Color(0xFFDDDDDD) else Color.White.copy(alpha = 0.2f))
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 
@@ -337,10 +357,9 @@ fun SearchAndFilterRow(
                     onClick = { onScanClick() },
                     modifier = Modifier.size(24.dp)
                 ) {
-                    Icon(
+                    Image(
                         painter = painterResource(id = R.drawable.camera),
                         contentDescription = "Scan",
-                        tint = Color.Unspecified,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -349,26 +368,14 @@ fun SearchAndFilterRow(
 
         // Filter Button
         Box {
-            com.example.shelfpalace.ui.components.NeonCard(
-                modifier = Modifier.size(48.dp),
+            NeonIconButton(
+                iconPainter = painterResource(id = R.drawable.control),
+                onClick = { filterMenuExpanded = true },
+                size = 48.dp,
+                iconSize = 28.dp,
                 color = MaterialTheme.colorScheme.primary,
-                containerAlpha = 0.3f,
-                padding = 0.dp
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clickable { filterMenuExpanded = true },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.control),
-                        contentDescription = "Filter",
-                        tint = Color.Unspecified,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            }
+                contentDescription = "Filter"
+            )
 
             MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(surface = Color.Black.copy(alpha = 0.4f))) {
                 DropdownMenu(
@@ -415,6 +422,11 @@ fun CategoryTabs(
     var moviesMenuExpanded by remember { mutableStateOf(false) }
     var musicMenuExpanded by remember { mutableStateOf(false) }
 
+    val isCyberGreen = LocalAppTheme.current == AppTheme.CYBER_GREEN
+    val containerBg = if (isCyberGreen) LoadedSurfaceNavy.copy(alpha = 0.8f) else Color.Black.copy(alpha = 0.3f)
+    val containerBorder = if (isCyberGreen) LoadedEmeraldGreen.copy(alpha = 0.6f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+    val categoryTextColor = if (isCyberGreen) Color.White.copy(alpha = 0.85f) else Color.White.copy(alpha = 0.5f)
+
     val manufacturers = StaticData.manufacturers.filter { !disabledIds.contains(it.id) }
     val movieFormats = StaticData.movieFormats.filter { !disabledIds.contains(it.id) }
     val musicFormats = StaticData.musicFormats.filter { !disabledIds.contains(it.id) }
@@ -433,20 +445,28 @@ fun CategoryTabs(
         list
     }
 
-    NeonCard(
+    val isRounded = LocalCornerStyle.current == CornerStyle.ROUNDED
+    val categoryShape = if (isRounded) CircleShape else getAppCorners()
+
+    Surface(
+        color = containerBg,
+        shape = categoryShape,
+        border = BorderStroke(
+            2.dp,
+            containerBorder
+        ),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp),
-        color = MaterialTheme.colorScheme.primary,
-        containerAlpha = 0.3f,
-        padding = 4.dp
+            .padding(horizontal = 20.dp)
     ) {
-        LazyRow(
-            modifier = Modifier.fillMaxWidth(),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            items(categories) { category ->
+            categories.forEach { category ->
                 var itemWidthDp by remember { mutableStateOf(0.dp) }
                 val density = LocalDensity.current
 
@@ -459,23 +479,22 @@ fun CategoryTabs(
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
-                            .clip(getAppCorners(12.dp))
+                            .clip(getAppCorners(16.dp))
                             .clickable { category.onClick() }
-                            .padding(vertical = 3.dp, horizontal = 6.dp)
+                            .padding(vertical = 4.dp, horizontal = 12.dp)
                     ) {
                         if (category.iconResId != null) {
-                            Icon(
+                            Image(
                                 painter = painterResource(id = category.iconResId),
                                 contentDescription = category.name,
-                                tint = Color.Unspecified,
-                                modifier = Modifier.size(44.dp)
+                                modifier = Modifier.size(40.dp)
                             )
                         } else if (category.icon != null) {
                             Icon(
                                 imageVector = category.icon,
                                 contentDescription = category.name,
-                                tint = Color.White.copy(alpha = 0.7f),
-                                modifier = Modifier.size(44.dp)
+                                tint = if (isCyberGreen) Color(0xFF1A1F38) else Color.White.copy(alpha = 0.7f),
+                                modifier = Modifier.size(40.dp)
                             )
                         }
                         
@@ -484,10 +503,10 @@ fun CategoryTabs(
                         Text(
                             text = category.name,
                             style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Medium,
+                                fontWeight = FontWeight.Bold,
                                 letterSpacing = 0.5.sp
                             ),
-                            color = Color.White.copy(alpha = 0.5f)
+                            color = categoryTextColor
                         )
                     }
 

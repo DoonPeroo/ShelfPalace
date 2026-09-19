@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.shelfpalace.R
+import com.example.shelfpalace.data.AppTheme
 import com.example.shelfpalace.data.BackupData
 import com.example.shelfpalace.data.CornerStyle
 import com.example.shelfpalace.data.Game
@@ -61,7 +62,8 @@ fun SettingsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val disabledIds by repository.disabledIds.collectAsState(initial = emptySet())
-    val cornerStyle by repository.cornerStyle.collectAsState(initial = CornerStyle.ROUNDED)
+    val cornerStyle by repository.cornerStyle.collectAsState(initial = CornerStyle.OUTLINED)
+    val appTheme by repository.appTheme.collectAsState(initial = AppTheme.SYNTHWAVE)
     var expandedManufacturerId by remember { mutableStateOf<String?>(null) }
     var isGamesExpanded by remember { mutableStateOf(value = false) }
     var isVideoExpanded by remember { mutableStateOf(false) }
@@ -90,6 +92,7 @@ fun SettingsScreen(
                     val sortOption = repository.sortOption.first()
                     val dashboardFilter = repository.dashboardFilter.first()
                     val cornerStyle = repository.cornerStyle.first()
+                    val appTheme = repository.appTheme.first()
                     
                     val backupData = BackupData(
                         games = games,
@@ -98,7 +101,8 @@ fun SettingsScreen(
                         disabledIds = disabledIds.toList(),
                         sortOption = sortOption.name,
                         dashboardFilter = dashboardFilter,
-                        cornerStyle = cornerStyle.name
+                        cornerStyle = cornerStyle.name,
+                        appTheme = appTheme.name
                     )
                     
                     val zipData = StorageUtil.createBackupZip(context, backupData, backupIncludeImages)
@@ -174,33 +178,75 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     padding = 8.dp
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "Corner Shape",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White,
-                            modifier = Modifier.padding(start = 4.dp)
-                        )
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Color Style Toggle
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Color Style",
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                color = Color.White,
+                                modifier = Modifier.padding(start = 4.dp)
+                            )
 
-                        NeonToggle(
-                            options = listOf("ROUND", "SQUARE"),
-                            selectedOption = if (cornerStyle == CornerStyle.ROUNDED) "ROUND" else "SQUARE",
-                            onOptionSelected = { option ->
-                                scope.launch {
-                                    repository.setCornerStyle(
-                                        if (option == "ROUND") CornerStyle.ROUNDED
-                                        else com.example.shelfpalace.data.CornerStyle.SQUARE
-                                    )
-                                }
-                            },
-                            modifier = Modifier.width(130.dp),
-                            height = 28.dp,
-                            color = accentColor
-                        )
+                            NeonToggle(
+                                options = listOf("SYNTHWAVE", "CYBER GREEN"),
+                                selectedOption = if (appTheme == AppTheme.CYBER_GREEN) "CYBER GREEN" else "SYNTHWAVE",
+                                onOptionSelected = { option ->
+                                    scope.launch {
+                                        repository.setAppTheme(
+                                            if (option == "CYBER GREEN") AppTheme.CYBER_GREEN
+                                            else AppTheme.SYNTHWAVE
+                                        )
+                                    }
+                                },
+                                modifier = Modifier.width(210.dp),
+                                height = 28.dp,
+                                color = accentColor
+                            )
+                        }
+
+                        HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
+
+                        // Corner Shape Toggle
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Corner Shape",
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                color = Color.White,
+                                modifier = Modifier.padding(start = 4.dp)
+                            )
+
+                            NeonToggle(
+                                options = listOf("DEFAULT", "ROUND", "SQUARE"),
+                                selectedOption = when (cornerStyle) {
+                                    CornerStyle.OUTLINED -> "DEFAULT"
+                                    CornerStyle.ROUNDED -> "ROUND"
+                                    CornerStyle.SQUARE -> "SQUARE"
+                                },
+                                onOptionSelected = { option ->
+                                    scope.launch {
+                                        repository.setCornerStyle(
+                                            when (option) {
+                                                "DEFAULT" -> CornerStyle.OUTLINED
+                                                "ROUND" -> CornerStyle.ROUNDED
+                                                else -> CornerStyle.SQUARE
+                                            }
+                                        )
+                                    }
+                                },
+                                modifier = Modifier.width(220.dp),
+                                height = 28.dp,
+                                color = accentColor
+                            )
+                        }
                     }
                 }
             }
@@ -525,7 +571,7 @@ fun SettingsScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "ver. BETA 0.85",
+                        text = "ver. BETA 0.88",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.sp
@@ -812,7 +858,11 @@ private suspend fun performRestore(
                 disabledIds = backupData.disabledIds.toSet(),
                 sortOption = try { SortOption.valueOf(backupData.sortOption) } catch (_: Exception) { SortOption.NAME },
                 dashboardFilter = backupData.dashboardFilter,
-                cornerStyle = try { CornerStyle.valueOf(backupData.cornerStyle) } catch (_: Exception) { CornerStyle.ROUNDED }
+                cornerStyle = try { CornerStyle.valueOf(backupData.cornerStyle) } catch (_: Exception) { CornerStyle.OUTLINED },
+                appTheme = when (backupData.appTheme) {
+                    "LOADED", "CYBER_GREEN", "CYBER GREEN" -> AppTheme.CYBER_GREEN
+                    else -> try { AppTheme.valueOf(backupData.appTheme) } catch (_: Exception) { AppTheme.SYNTHWAVE }
+                }
             )
             
             val total = backupData.games.size + backupData.movies.size + backupData.music.size

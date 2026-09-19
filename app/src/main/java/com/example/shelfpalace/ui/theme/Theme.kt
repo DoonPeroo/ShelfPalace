@@ -15,11 +15,13 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import com.example.shelfpalace.data.AppTheme
 import com.example.shelfpalace.data.CornerStyle
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 
-val LocalCornerStyle = staticCompositionLocalOf { CornerStyle.ROUNDED }
+val LocalCornerStyle = staticCompositionLocalOf { CornerStyle.OUTLINED }
+val LocalAppTheme = staticCompositionLocalOf { AppTheme.SYNTHWAVE }
 
 private val LightColorScheme = lightColorScheme(
     primary = LightPrimary,
@@ -35,12 +37,13 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun ShelfPalaceTheme(
     darkTheme: Boolean = true,
-    corners: CornerStyle = CornerStyle.ROUNDED,
+    corners: CornerStyle = CornerStyle.OUTLINED,
+    appTheme: AppTheme = AppTheme.SYNTHWAVE,
     // Dynamic color is available on Android 12+, but disabled by default to maintain consistent Synthwave look
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val darkColorScheme = darkColorScheme(
+    val synthwaveColorScheme = darkColorScheme(
         primary = SynthwaveLavender,
         secondary = SynthwaveLavender,
         background = DarkBackground,
@@ -51,13 +54,26 @@ fun ShelfPalaceTheme(
         onSurface = DarkOnSurface
     )
 
+    val loadedColorScheme = darkColorScheme(
+        primary = LoadedEmeraldGreen,
+        secondary = LoadedEmeraldGreen,
+        tertiary = LoadedCyan,
+        background = LoadedDarkNavy,
+        surface = LoadedSurfaceNavy,
+        onPrimary = Color.White,
+        onSecondary = Color.White,
+        onBackground = Color.White,
+        onSurface = Color.White
+    )
+
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
 
-        darkTheme -> darkColorScheme
+        appTheme == AppTheme.CYBER_GREEN -> loadedColorScheme
+        darkTheme -> synthwaveColorScheme
         else -> LightColorScheme
     }
     
@@ -85,7 +101,8 @@ fun ShelfPalaceTheme(
         typography = Typography,
     ) {
         CompositionLocalProvider(
-            LocalCornerStyle provides corners
+            LocalCornerStyle provides corners,
+            LocalAppTheme provides appTheme
         ) {
             content()
         }

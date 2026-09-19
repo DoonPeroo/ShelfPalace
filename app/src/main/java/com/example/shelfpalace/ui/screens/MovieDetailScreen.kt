@@ -91,7 +91,7 @@ fun MovieDetailScreen(
 
                     Spacer(modifier = Modifier.width(4.dp))
 
-                    val headerCorners = 12.dp
+                    val headerCorners = 24.dp
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -298,6 +298,7 @@ fun MovieInfoTab(movie: Movie, accentColor: Color, onFormatClick: (String) -> Un
         "vhs" -> "VHS" to Icons.Rounded.Videocam
         "laserdisc" -> "LaserDisc" to Icons.Rounded.DiscFull
         "vcd" -> "Video CD" to Icons.Rounded.Album
+        "umd" -> "UMD Video" to Icons.Rounded.Album
         "dvd" -> "DVD" to Icons.Rounded.Album
         "bluray" -> "Blu-ray" to Icons.Rounded.Album
         "hddvd" -> "HD DVD" to Icons.Rounded.Album

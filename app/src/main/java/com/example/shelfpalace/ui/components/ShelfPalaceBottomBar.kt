@@ -6,6 +6,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import com.example.shelfpalace.data.AppTheme
+import com.example.shelfpalace.data.CornerStyle
+import com.example.shelfpalace.ui.theme.LocalAppTheme
+import com.example.shelfpalace.ui.theme.LocalCornerStyle
+import com.example.shelfpalace.ui.theme.LoadedEmeraldGreen
+import com.example.shelfpalace.ui.theme.LoadedSurfaceNavy
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -75,27 +82,31 @@ fun ShelfPalaceBottomBar(
                 selectedColor = Color(0xFFAD1457)
             )
             
+            val isCyberGreen = LocalAppTheme.current == AppTheme.CYBER_GREEN
+            val isRounded = LocalCornerStyle.current == CornerStyle.ROUNDED
+
             val interactionSource = remember { MutableInteractionSource() }
             val isPressed by interactionSource.collectIsPressedAsState()
             
-            val addButtonBgColor = Color(0xFF252D3A)
-            val addButtonBorderColor = Color(0xFF7F8B9C)
-            val primaryColor = MaterialTheme.colorScheme.primary
-            
             val isHighlighted = isPressed || isAddActive
+            val addShape = if (isRounded) CircleShape else getAppCorners(12.dp)
+
+            val (addBg, addBorder, addIconTint) = if (isCyberGreen) {
+                val bg = if (isHighlighted) LoadedEmeraldGreen.copy(alpha = 0.35f) else LoadedSurfaceNavy.copy(alpha = 0.8f)
+                val border = if (isHighlighted) LoadedEmeraldGreen else LoadedEmeraldGreen.copy(alpha = 0.6f)
+                val iconTint = if (isHighlighted) Color.White else LoadedEmeraldGreen
+                Triple(bg, border, iconTint)
+            } else {
+                val bg = if (isHighlighted) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else Color(0xFF252D3A).copy(alpha = 0.6f)
+                val border = if (isHighlighted) MaterialTheme.colorScheme.primary else Color(0xFF7F8B9C).copy(alpha = 0.5f)
+                Triple(bg, border, Color.White)
+            }
 
             Box(
                 modifier = Modifier
                     .size(80.dp, 48.dp)
-                    .background(
-                        if (isHighlighted) primaryColor.copy(alpha = 0.3f) else addButtonBgColor.copy(alpha = 0.6f), 
-                        getAppCorners(12.dp)
-                    )
-                    .border(
-                        1.5.dp, 
-                        if (isHighlighted) primaryColor else addButtonBorderColor.copy(alpha = 0.5f), 
-                        getAppCorners(12.dp)
-                    )
+                    .background(addBg, addShape)
+                    .border(2.dp, addBorder, addShape)
                     .clickable(
                         interactionSource = interactionSource,
                         indication = null,
@@ -106,7 +117,7 @@ fun ShelfPalaceBottomBar(
                 Icon(
                     imageVector = Icons.Rounded.Add,
                     contentDescription = "Add",
-                    tint = Color.White,
+                    tint = addIconTint,
                     modifier = Modifier.size(28.dp)
                 )
             }

@@ -115,7 +115,7 @@ fun MusicListScreen(
                                 .focusRequester(focusRequester),
                             placeholder = { Text("Search music...") },
                             singleLine = true,
-                            shape = getAppCorners(8.dp),
+                            shape = getAppCorners(),
                             colors = synthwaveTextFieldColors(accentColor),
                             textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.White)
                         )
@@ -141,7 +141,7 @@ fun MusicListScreen(
 
                     Spacer(modifier = Modifier.width(4.dp))
 
-                    val headerCorners = 12.dp
+                    val headerCorners = 24.dp
                     val headerTitle = formatName.uppercase()
                     val dynamicFontSize = when {
                         headerTitle.length >= 22 -> 10.5.sp

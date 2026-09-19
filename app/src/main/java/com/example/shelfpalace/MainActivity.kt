@@ -8,6 +8,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.camera.core.ExperimentalGetImage
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.example.shelfpalace.data.AppTheme
 import com.example.shelfpalace.data.CornerStyle
 import com.example.shelfpalace.data.GameRepository
 import com.example.shelfpalace.data.MovieRepository
@@ -30,9 +31,10 @@ class MainActivity : ComponentActivity() {
         val settingsRepository = SettingsRepository(this)
         
         setContent {
-            val cornerStyle by settingsRepository.cornerStyle.collectAsState(initial = CornerStyle.ROUNDED)
+            val cornerStyle by settingsRepository.cornerStyle.collectAsState(initial = CornerStyle.OUTLINED)
+            val appTheme by settingsRepository.appTheme.collectAsState(initial = AppTheme.SYNTHWAVE)
             
-            ShelfPalaceTheme(corners = cornerStyle) {
+            ShelfPalaceTheme(corners = cornerStyle, appTheme = appTheme) {
                 MainApp(
                     repository = repository,
                     movieRepository = movieRepository,

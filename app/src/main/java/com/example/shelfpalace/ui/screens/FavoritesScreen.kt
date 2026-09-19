@@ -133,13 +133,10 @@ fun FavoritesScreen(
                         )
                         LaunchedEffect(Unit) { focusRequester.requestFocus() }
                     } else {
-                        Text(
+                        NeonHeader(
                             text = "FAVORITES",
-                            style = MaterialTheme.typography.headlineMedium.copy(
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 1.sp,
-                                color = accentColor
-                            )
+                            fullWidth = false,
+                            color = accentColor
                         )
                     }
                 },

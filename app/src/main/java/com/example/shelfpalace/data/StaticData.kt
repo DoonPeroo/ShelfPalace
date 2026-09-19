@@ -52,6 +52,7 @@ object StaticData {
         MovieFormat("laserdisc", "LaserDisc", "laserdisc"),
         MovieFormat("vcd", "Video CD", "vcd"),
         MovieFormat("dvd", "DVD", "dvd"),
+        MovieFormat("umd", "UMD Video", "umd"),
         MovieFormat("hddvd", "HD DVD", "hddvd"),
         MovieFormat("bluray", "Blu-ray", "bluray"),
         MovieFormat("bluray3d", "3D Blu-ray", "bluray3d"),

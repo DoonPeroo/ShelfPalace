@@ -124,7 +124,7 @@ fun MusicDetailScreen(
 
                     Spacer(modifier = Modifier.width(4.dp))
 
-                    val headerCorners = 12.dp
+                    val headerCorners = 24.dp
                     Box(
                         modifier = Modifier
                             .weight(1f)

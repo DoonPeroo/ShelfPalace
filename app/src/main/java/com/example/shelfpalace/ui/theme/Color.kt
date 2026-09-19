@@ -31,3 +31,13 @@ val LightBackground = Color(0xFFF5F0FF)
 val LightSurface = Color.White
 val LightOnBackground = SynthwaveDark
 val LightOnSurface = SynthwaveDark
+
+// LOADED Theme Colors (Pixel-Accurate 1:1 based on LOADED UI design)
+val LoadedDarkNavy = Color(0xFF111425)
+val LoadedSurfaceNavy = Color(0xFF181C33)
+val LoadedCardBorder = Color(0xFF2D355C)
+val LoadedEmeraldGreen = Color(0xFF2BB673)
+val LoadedCyan = Color(0xFF00D2D3)
+val LoadedCoralRed = Color(0xFFFF3B38)
+val LoadedTextMuted = Color(0xFF8B95B7)
+val LoadedDivider = Color(0xFF222744)

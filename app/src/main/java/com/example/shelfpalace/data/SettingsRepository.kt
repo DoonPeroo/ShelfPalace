@@ -15,23 +15,42 @@ class SettingsRepository(private val context: Context) {
     private val sortOptionKey = stringPreferencesKey("sort_option")
     private val dashboardFilterKey = stringPreferencesKey("dashboard_filter")
     private val cornerStyleKey = stringPreferencesKey("corner_style")
+    private val appThemeKey = stringPreferencesKey("app_theme")
 
     val disabledIds: Flow<Set<String>> = context.dataStore.data.map { preferences ->
         preferences[disabledIdsKey] ?: emptySet()
     }
 
     val cornerStyle: Flow<CornerStyle> = context.dataStore.data.map { preferences ->
-        val name = preferences[cornerStyleKey] ?: CornerStyle.ROUNDED.name
+        val name = preferences[cornerStyleKey] ?: CornerStyle.OUTLINED.name
         try {
             CornerStyle.valueOf(name)
         } catch (e: Exception) {
-            CornerStyle.ROUNDED
+            CornerStyle.OUTLINED
         }
     }
 
     suspend fun setCornerStyle(style: CornerStyle) {
         context.dataStore.edit { preferences ->
             preferences[cornerStyleKey] = style.name
+        }
+    }
+
+    val appTheme: Flow<AppTheme> = context.dataStore.data.map { preferences ->
+        val name = preferences[appThemeKey] ?: AppTheme.SYNTHWAVE.name
+        when (name) {
+            "LOADED", "CYBER_GREEN" -> AppTheme.CYBER_GREEN
+            else -> try {
+                AppTheme.valueOf(name)
+            } catch (e: Exception) {
+                AppTheme.SYNTHWAVE
+            }
+        }
+    }
+
+    suspend fun setAppTheme(theme: AppTheme) {
+        context.dataStore.edit { preferences ->
+            preferences[appThemeKey] = theme.name
         }
     }
 
@@ -82,13 +101,15 @@ class SettingsRepository(private val context: Context) {
         disabledIds: Set<String>,
         sortOption: SortOption,
         dashboardFilter: String,
-        cornerStyle: CornerStyle
+        cornerStyle: CornerStyle,
+        appTheme: AppTheme = AppTheme.SYNTHWAVE
     ) {
         context.dataStore.edit { preferences ->
             preferences[disabledIdsKey] = disabledIds
             preferences[sortOptionKey] = sortOption.name
             preferences[dashboardFilterKey] = dashboardFilter
             preferences[cornerStyleKey] = cornerStyle.name
+            preferences[appThemeKey] = appTheme.name
         }
     }
 }

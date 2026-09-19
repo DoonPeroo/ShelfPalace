@@ -103,7 +103,13 @@ enum class SortOption {
 
 enum class CornerStyle {
     ROUNDED,
+    OUTLINED,
     SQUARE
+}
+
+enum class AppTheme {
+    SYNTHWAVE,
+    CYBER_GREEN
 }
 
 @Serializable
@@ -114,5 +120,6 @@ data class BackupData(
     val disabledIds: List<String> = emptyList(),
     val sortOption: String = "NAME",
     val dashboardFilter: String = "Recently Added",
-    val cornerStyle: String = "ROUNDED"
+    val cornerStyle: String = "OUTLINED",
+    val appTheme: String = "SYNTHWAVE"
 )

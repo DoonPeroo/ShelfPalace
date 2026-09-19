@@ -260,7 +260,7 @@ fun DiscogsSearchScreen(
                     )
                 },
                 singleLine = true,
-                shape = getAppCorners(8.dp),
+                shape = getAppCorners(),
                 colors = synthwaveTextFieldColors(musicColor)
             )
 

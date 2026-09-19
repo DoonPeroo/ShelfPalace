@@ -24,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -141,20 +142,21 @@ fun NeonButton(
     height: Dp = 52.dp,
     contentPadding: PaddingValues = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
 ) {
+    val isCyberGreen = LocalAppTheme.current == AppTheme.CYBER_GREEN
+    val buttonColor = if (isCyberGreen && (color == MaterialTheme.colorScheme.primary || color == SynthwaveLavender)) LoadedEmeraldGreen else color
+
     val radius = 12.dp
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     
-    // Use a slightly darker shade of Lavender for the pressed state highlight
     val pressedHighlight = Color(0xFF8A91AB) 
     
-    // If the button color is white/grayish, make it pop with the highlight color when pressed
-    val isNeutral = abs(color.red - color.green) < 0.1f && abs(color.green - color.blue) < 0.1f
-    val highlightColor = if (isPressed && isNeutral) pressedHighlight else color
+    val isNeutral = abs(buttonColor.red - buttonColor.green) < 0.1f && abs(buttonColor.green - buttonColor.blue) < 0.1f
+    val highlightColor = if (isPressed && isNeutral) pressedHighlight else buttonColor
     
     val finalContainerColor = if (isPressed) highlightColor.copy(alpha = 0.15f) else containerColor
-    val finalContentColor = if (isPressed) highlightColor else color
-    val finalBorderColor = if (isPressed) highlightColor else color.copy(alpha = 0.5f)
+    val finalContentColor = if (isPressed) highlightColor else buttonColor
+    val finalBorderColor = if (isPressed) highlightColor else buttonColor.copy(alpha = 0.5f)
 
     Button(
         onClick = onClick,
@@ -228,7 +230,7 @@ fun NeonIconButton(
     val isPressed by interactionSource.collectIsPressedAsState()
 
     val finalContainerColor = if (isPressed) defaultBorder.copy(alpha = 0.35f) else defaultBg
-    val finalContentColor = tint ?: defaultTint
+    val finalContentColor = if (tint != null && tint != Color.Unspecified) tint else defaultTint
     val finalBorderColor = if (isPressed) defaultTint else defaultBorder
 
     val iconShape = if (isRounded) CircleShape else getAppCorners(12.dp)
@@ -254,6 +256,7 @@ fun NeonIconButton(
                 Image(
                     painter = iconPainter,
                     contentDescription = contentDescription,
+                    colorFilter = if (tint != null && tint != Color.Unspecified) ColorFilter.tint(tint) else null,
                     modifier = Modifier.size(iconSize).then(iconModifier)
                 )
             }

@@ -37,7 +37,12 @@ sealed interface Destinations {
     data class MovieDetail(val movieId: String) : Destinations
 
     @Serializable
-    data class AddEditMovie(val formatId: String? = null, val movieId: String? = null) : Destinations
+    data class AddEditMovie(
+        val formatId: String? = null,
+        val movieId: String? = null,
+        val tmdbId: Long? = null,
+        val language: String = "en-US"
+    ) : Destinations
 
     @Serializable
     data class MusicList(val formatId: String) : Destinations
@@ -75,5 +80,14 @@ sealed interface Destinations {
         val initialLabel: String? = null,
         val initialCountry: String? = null,
         val initialYear: String? = null
+    ) : Destinations
+
+    @Serializable
+    data class TmdbSearch(
+        val formatId: String? = null,
+        val movieId: String? = null,
+        val initialQuery: String? = null,
+        val initialYear: String? = null,
+        val initialLanguage: String = "en-US"
     ) : Destinations
 }

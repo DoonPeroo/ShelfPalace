@@ -1,12 +1,16 @@
 package com.example.shelfpalace.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Notes
@@ -19,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -26,16 +31,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.shelfpalace.R
 import com.example.shelfpalace.data.Movie
 import com.example.shelfpalace.data.MovieRepository
+import com.example.shelfpalace.data.remote.TmdbService
+import com.example.shelfpalace.data.remote.TmdbVideo
 import com.example.shelfpalace.ui.components.*
 import com.example.shelfpalace.ui.theme.DarkBackground
 import com.example.shelfpalace.util.DateUtils
 import com.example.shelfpalace.util.StorageUtil
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,15 +56,19 @@ fun MovieDetailScreen(
     onBack: () -> Unit,
     @Suppress("UNUSED_PARAMETER") onHome: () -> Unit = {}
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     val movie by repository.getMovieStream(movieId).collectAsStateWithLifecycle(initialValue = null)
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     var selectedImageIndex by remember { mutableStateOf<Int?>(null) }
     val scope = rememberCoroutineScope()
     val accentColor = MaterialTheme.colorScheme.primary
     
-    val screenshots = emptyList<String>()
-    val isMediaLoading = false
+    var screenshots by remember { mutableStateOf(emptyList<String>()) }
+    var videos by remember { mutableStateOf(emptyList<TmdbVideo>()) }
+    var isMediaLoading by remember { mutableStateOf(false) }
+    var selectedVideoId by remember { mutableStateOf<String?>(null) }
+    var selectedVideoTitle by remember { mutableStateOf("") }
+    var selectedMediaLanguage by remember { mutableStateOf("en-US") }
     
     var selectedTabIndex by remember { mutableStateOf(0) }
     val tabs = listOf("Info", "Media", "My Details")
@@ -69,6 +82,35 @@ fun MovieDetailScreen(
     movie?.let { currentMovie ->
         LaunchedEffect(currentMovie.notes) {
             editingNotes = currentMovie.notes
+        }
+
+        LaunchedEffect(currentMovie.language) {
+            if (currentMovie.language.isNotBlank()) {
+                selectedMediaLanguage = currentMovie.language
+            }
+        }
+
+        LaunchedEffect(currentMovie.title, currentMovie.releaseDate, selectedMediaLanguage) {
+            screenshots = emptyList()
+            videos = emptyList()
+            if (currentMovie.title.isNotBlank()) {
+                isMediaLoading = true
+                try {
+                    val yearPart = currentMovie.releaseDate.take(4)
+                    val (images, vids) = withContext(Dispatchers.IO) {
+                        TmdbService.fetchMovieMedia(
+                            movieTitle = currentMovie.title,
+                            releaseYear = yearPart,
+                            language = selectedMediaLanguage
+                        )
+                    }
+                    screenshots = images.mapNotNull { it.fullUrl }
+                    videos = vids
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                isMediaLoading = false
+            }
         }
 
         Scaffold(
@@ -223,7 +265,19 @@ fun MovieDetailScreen(
                     ) {
                         when (selectedTabIndex) {
                             0 -> MovieInfoTab(currentMovie, accentColor, onFormatClick)
-                            1 -> MovieMediaTab(accentColor, screenshots, isMediaLoading, onImageClick = { selectedImageIndex = it })
+                            1 -> MovieMediaTab(
+                                accentColor = accentColor,
+                                screenshots = screenshots,
+                                videos = videos,
+                                isLoading = isMediaLoading,
+                                selectedLanguage = selectedMediaLanguage,
+                                onLanguageChanged = { selectedMediaLanguage = it },
+                                onImageClick = { selectedImageIndex = it },
+                                onVideoClick = { vId, vTitle ->
+                                    selectedVideoId = vId
+                                    selectedVideoTitle = vTitle
+                                }
+                            )
                             2 -> MovieMyDetailsTab(
                                 movie = currentMovie,
                                 accentColor = accentColor,
@@ -279,6 +333,15 @@ fun MovieDetailScreen(
             },
             title = stringResource(R.string.msg_delete_movie_confirmation_title),
             text = stringResource(R.string.msg_delete_movie_confirmation_text)
+        )
+    }
+
+    selectedVideoId?.let { vId ->
+        VideoPlayerDialog(
+            videoId = vId,
+            videoTitle = selectedVideoTitle,
+            onDismissRequest = { selectedVideoId = null },
+            accentColor = accentColor
         )
     }
 
@@ -380,14 +443,104 @@ fun MovieInfoTab(movie: Movie, accentColor: Color, onFormatClick: (String) -> Un
 }
 
 @Composable
-fun MovieMediaTab(accentColor: Color, screenshots: List<String>, isLoading: Boolean, onImageClick: (Int) -> Unit) {
-    Column {
+fun MovieMediaTab(
+    accentColor: Color,
+    screenshots: List<String>,
+    videos: List<TmdbVideo>,
+    isLoading: Boolean,
+    selectedLanguage: String,
+    onLanguageChanged: (String) -> Unit,
+    onImageClick: (Int) -> Unit,
+    onVideoClick: (String, String) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        // TRAILERS & VIDEOS SECTION HEADER WITH LANGUAGE TOGGLE
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Trailers & Videos",
+                style = MaterialTheme.typography.titleMedium.copy(color = Color.White, fontWeight = FontWeight.Bold)
+            )
+
+            NeonToggle(
+                options = listOf("EN", "DE"),
+                selectedOption = if (selectedLanguage == "de-DE") "DE" else "EN",
+                onOptionSelected = { choice ->
+                    onLanguageChanged(if (choice == "DE") "de-DE" else "en-US")
+                },
+                modifier = Modifier.width(110.dp),
+                height = 28.dp,
+                color = accentColor
+            )
+        }
+
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = accentColor, modifier = Modifier.size(28.dp))
+            }
+        } else if (videos.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(90.dp)
+                    .background(Color.White.copy(alpha = 0.05f), getAppCorners(8.dp))
+                    .border(1.dp, Color.White.copy(alpha = 0.1f), getAppCorners(8.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("No videos available", color = Color.White.copy(alpha = 0.4f), style = MaterialTheme.typography.bodySmall)
+            }
+        } else {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(videos) { video ->
+                    Box(
+                        modifier = Modifier
+                            .size(width = 200.dp, height = 112.dp)
+                            .clip(getAppCorners(12.dp))
+                            .border(1.dp, accentColor.copy(alpha = 0.5f), getAppCorners(12.dp))
+                            .clickable { video.key?.let { onVideoClick(it, video.name ?: "Trailer") } },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AsyncImage(
+                            model = video.thumbnailUrl,
+                            contentDescription = video.name,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(Color.Black.copy(alpha = 0.6f), CircleShape)
+                                .border(1.dp, accentColor, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.PlayArrow,
+                                contentDescription = "Play",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // SCREENSHOTS & STILLS SECTION
         Text(
-            "Screenshots",
+            "Screenshots & Stills",
             style = MaterialTheme.typography.titleMedium.copy(color = Color.White, fontWeight = FontWeight.Bold)
         )
-        Spacer(modifier = Modifier.height(12.dp))
-        
+
         if (isLoading) {
             Box(
                 modifier = Modifier
@@ -395,21 +548,21 @@ fun MovieMediaTab(accentColor: Color, screenshots: List<String>, isLoading: Bool
                     .height(150.dp),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = accentColor, modifier = Modifier.size(32.dp))
+                CircularProgressIndicator(color = accentColor, modifier = Modifier.size(28.dp))
             }
         } else if (screenshots.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(150.dp)
+                    .height(120.dp)
                     .background(Color.White.copy(alpha = 0.05f), getAppCorners(8.dp))
                     .border(1.dp, Color.White.copy(alpha = 0.1f), getAppCorners(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Rounded.CloudOff, contentDescription = null, tint = Color.White.copy(alpha = 0.2f), modifier = Modifier.size(40.dp))
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("No screenshots available", color = Color.White.copy(alpha = 0.4f))
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("No screenshots available", color = Color.White.copy(alpha = 0.4f), style = MaterialTheme.typography.bodySmall)
                 }
             }
         } else {

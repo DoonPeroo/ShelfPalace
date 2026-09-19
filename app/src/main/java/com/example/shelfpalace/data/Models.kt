@@ -58,7 +58,8 @@ data class Movie(
     val status: String = "Plan to watch",
     val purchaseDate: String = "",
     val pricePaid: String = "",
-    val notes: String = ""
+    val notes: String = "",
+    val language: String = "en-US"
 )
 
 @Serializable

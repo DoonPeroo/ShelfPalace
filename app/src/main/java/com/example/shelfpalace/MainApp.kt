@@ -587,20 +587,54 @@ fun MainApp(
                     AddEditMovieScreen(
                         formatId = route.formatId,
                         movieId = route.movieId,
+                        tmdbId = route.tmdbId,
+                        language = route.language,
                         repository = movieRepository,
                         onSave = { savedMovieId ->
-                            if (isEditMode) {
-                                navController.popBackStack()
-                            } else {
-                                navController.popBackStack()
+                            navController.popBackStack<Destinations.AddEditMovie>(inclusive = true)
+                            if (!isEditMode) {
                                 navController.navigate(Destinations.MovieDetail(savedMovieId))
                             }
+                        },
+                        onTmdbSearch = { currentTitle, currentYear, currentLanguage ->
+                            navController.navigate(
+                                Destinations.TmdbSearch(
+                                    formatId = route.formatId,
+                                    movieId = route.movieId,
+                                    initialQuery = currentTitle,
+                                    initialYear = currentYear,
+                                    initialLanguage = currentLanguage
+                                )
+                            )
                         },
                         onBack = { navController.popBackStack() },
                         onClose = { navController.popBackStack() },
                         onHome = { 
-                            navController.popBackStack(Destinations.LibraryDashboard, false)
+                            navController.popBackStack<Destinations.AddEditMovie>(inclusive = true)
                         }
+                    )
+                }
+
+                composable<Destinations.TmdbSearch> { backStackEntry ->
+                    val route: Destinations.TmdbSearch = backStackEntry.toRoute()
+                    TmdbSearchScreen(
+                        initialQuery = route.initialQuery,
+                        initialYear = route.initialYear,
+                        initialLanguage = route.initialLanguage,
+                        onMovieSelected = { selectedTmdbId: Long, selectedLanguage: String ->
+                            navController.navigate(
+                                Destinations.AddEditMovie(
+                                    formatId = route.formatId,
+                                    movieId = route.movieId,
+                                    tmdbId = selectedTmdbId,
+                                    language = selectedLanguage
+                                )
+                            ) {
+                                popUpTo<Destinations.AddEditMovie> { inclusive = true }
+                            }
+                        },
+                        onBack = { navController.popBackStack() },
+                        onClose = { navController.popBackStack() }
                     )
                 }
                 // Music Routes

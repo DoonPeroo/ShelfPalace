@@ -28,6 +28,7 @@ import com.example.shelfpalace.R
 import com.example.shelfpalace.data.Movie
 import com.example.shelfpalace.data.MovieRepository
 import com.example.shelfpalace.data.StaticData
+import com.example.shelfpalace.data.remote.TmdbService
 import com.example.shelfpalace.ui.components.*
 import com.example.shelfpalace.ui.theme.SynthwaveCyan
 import com.example.shelfpalace.ui.theme.SynthwaveDark
@@ -65,8 +66,11 @@ import java.util.UUID
 fun AddEditMovieScreen(
     formatId: String?,
     movieId: String?,
+    tmdbId: Long? = null,
+    language: String = "en-US",
     repository: MovieRepository,
     onSave: (String) -> Unit,
+    onTmdbSearch: (query: String, year: String, language: String) -> Unit = { _, _, _ -> },
     onBack: () -> Unit,
     onClose: () -> Unit = onBack,
     @Suppress("UNUSED_PARAMETER") onHome: () -> Unit,
@@ -86,6 +90,7 @@ fun AddEditMovieScreen(
     var purchaseDate by rememberSaveable { mutableStateOf("") }
     var pricePaid by rememberSaveable { mutableStateOf("") }
     var dateAdded by rememberSaveable { mutableLongStateOf(System.currentTimeMillis()) }
+    var currentLanguage by rememberSaveable { mutableStateOf(language) }
     var tempImageUriString by rememberSaveable { mutableStateOf<String?>(null) }
     var bitmapToCrop by remember { mutableStateOf<Bitmap?>(null) }
     var showCropDialog by remember { mutableStateOf(false) }
@@ -106,23 +111,104 @@ fun AddEditMovieScreen(
     val isEditMode = movieId != null
     var isInitialized by remember { mutableStateOf(false) }
     var existingMovie by remember { mutableStateOf<Movie?>(null) }
+    var loadedTmdbId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var loadedLanguage by rememberSaveable { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(movieId, tmdbId, language) {
+        if (!isInitialized) {
+            if (isEditMode && movieId != null) {
+                val movie = repository.getMovieById(movieId)
+                movie?.let {
+                    existingMovie = it
+                    currentFormatId = it.formatId
+                    title = it.title
+                    releaseDate = it.releaseDate
+                    genre = it.genre
+                    director = it.director
+                    cast = it.cast
+                    description = it.description
+                    coverUri = it.coverUri
+                    isFavorite = it.isFavorite
+                    dateAdded = it.dateAdded
+                    purchaseDate = it.purchaseDate
+                    pricePaid = it.pricePaid
+                    if (it.language.isNotBlank()) currentLanguage = it.language
+                    
+                    if (it.releaseDate.isNotEmpty()) {
+                        displayDate = DateUtils.formatDisplayDate(it.releaseDate)
+                        val parts = it.releaseDate.split("-")
+                        if (parts.size == 3) {
+                            selectedYear = parts[0]
+                            selectedMonth = parts[1].padStart(2, '0')
+                            selectedDay = parts[2].padStart(2, '0')
+                        } else if (parts.size == 1) {
+                            selectedYear = parts[0]
+                        }
+                    }
+                    if (it.purchaseDate.isNotEmpty()) {
+                        val parts = it.purchaseDate.split("-")
+                        if (parts.size == 3) {
+                            selectedPurchaseYear = parts[0]
+                            selectedPurchaseMonth = parts[1].padStart(2, '0')
+                            selectedPurchaseDay = parts[2].padStart(2, '0')
+                        } else if (parts.size == 1) {
+                            selectedPurchaseYear = parts[0]
+                        }
+                    }
+                }
+            }
+            isInitialized = true
+        }
+
+        if (tmdbId != null && (tmdbId != loadedTmdbId || language != loadedLanguage)) {
+            val details = withContext(Dispatchers.IO) {
+                TmdbService.getMovieDetails(tmdbId, language = language)
+            }
+            if (details != null) {
+                if (!details.title.isNullOrBlank()) title = details.title
+                if (!details.releaseDate.isNullOrBlank()) {
+                    releaseDate = details.releaseDate
+                    displayDate = DateUtils.formatDisplayDate(releaseDate)
+                    val parts = releaseDate.split("-")
+                    if (parts.size == 3) {
+                        selectedYear = parts[0]
+                        selectedMonth = parts[1].padStart(2, '0')
+                        selectedDay = parts[2].padStart(2, '0')
+                    } else if (parts.size == 1) {
+                        selectedYear = parts[0]
+                        selectedMonth = ""
+                        selectedDay = ""
+                    }
+                }
+                if (details.genreNames.isNotBlank()) genre = details.genreNames
+                if (details.directorName.isNotBlank()) director = details.directorName
+                if (details.castNames.isNotBlank()) cast = details.castNames
+                if (!details.overview.isNullOrBlank()) description = details.overview
+
+                val posterUrl = details.posterUrl
+                if (!posterUrl.isNullOrBlank()) {
+                    val downloadedUri = withContext(Dispatchers.IO) {
+                        StorageUtil.downloadAndSaveImage(context, posterUrl)
+                    }
+                    if (downloadedUri != null) {
+                        coverUri = downloadedUri.toString()
+                    }
+                }
+            }
+            loadedTmdbId = tmdbId
+            loadedLanguage = language
+            currentLanguage = language
+        }
+    }
 
     val saveMovie: () -> Unit = {
         scope.launch {
             try {
                 val targetId = existingMovie?.id ?: movieId?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString()
-                val isCurrentlyEditing = !movieId.isNullOrBlank() || existingMovie != null
+                val isCurrentlyEditing = existingMovie != null || !movieId.isNullOrBlank()
                 val originalDateAdded = existingMovie?.dateAdded ?: dateAdded
 
-                val movie = (existingMovie ?: Movie(
-                    id = targetId,
-                    formatId = currentFormatId,
-                    title = title,
-                    coverUri = coverUri,
-                    releaseDate = releaseDate,
-                    description = description,
-                    dateAdded = originalDateAdded
-                )).copy(
+                val movieToSave = Movie(
                     id = targetId,
                     formatId = currentFormatId,
                     title = title,
@@ -137,13 +223,14 @@ fun AddEditMovieScreen(
                     status = existingMovie?.status ?: "Plan to watch",
                     purchaseDate = purchaseDate,
                     pricePaid = pricePaid,
-                    notes = existingMovie?.notes ?: ""
+                    notes = existingMovie?.notes ?: "",
+                    language = currentLanguage
                 )
                 withContext(NonCancellable) {
                     if (isCurrentlyEditing) {
-                        repository.updateMovie(movie)
+                        repository.updateMovie(movieToSave)
                     } else {
-                        repository.insertMovie(movie)
+                        repository.insertMovie(movieToSave)
                     }
                 }
                 onSave(targetId)
@@ -181,44 +268,6 @@ fun AddEditMovieScreen(
                         showCropDialog = true
                     }
                 }
-            }
-        }
-    }
-
-    LaunchedEffect(movieId) {
-        if (isEditMode && !isInitialized) {
-            val movie = repository.getMovieById(movieId)
-            movie?.let {
-                existingMovie = it
-                currentFormatId = it.formatId
-                title = it.title
-                releaseDate = it.releaseDate
-                genre = it.genre
-                director = it.director
-                cast = it.cast
-                description = it.description
-                coverUri = it.coverUri
-                isFavorite = it.isFavorite
-                dateAdded = it.dateAdded
-                
-                if (it.releaseDate.isNotEmpty()) {
-                    displayDate = DateUtils.formatDisplayDate(it.releaseDate)
-                    val parts = it.releaseDate.split("-")
-                    if (parts.size == 3) {
-                        selectedYear = parts[0]
-                        selectedMonth = parts[1]
-                        selectedDay = parts[2]
-                    }
-                }
-                if (it.purchaseDate.isNotEmpty()) {
-                    val parts = it.purchaseDate.split("-")
-                    if (parts.size == 3) {
-                        selectedPurchaseYear = parts[0]
-                        selectedPurchaseMonth = parts[1]
-                        selectedPurchaseDay = parts[2]
-                    }
-                }
-                isInitialized = true
             }
         }
     }
@@ -285,6 +334,18 @@ fun AddEditMovieScreen(
                 padding = 12.dp
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    NeonButton(
+                        text = "IMPORT MOVIE (TMDB)",
+                        icon = Icons.Rounded.Movie,
+                        onClick = {
+                            val yearPart = selectedYear.takeIf { it.isNotBlank() } ?: ""
+                            onTmdbSearch(title, yearPart, language)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.secondary,
+                        height = 42.dp
+                    )
+
                     OutlinedTextField(
                         value = title,
                         onValueChange = { title = it },

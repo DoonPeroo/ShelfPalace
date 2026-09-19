@@ -21,7 +21,8 @@ data class MovieEntity(
     val status: String,
     val purchaseDate: String = "",
     val pricePaid: String = "",
-    val notes: String
+    val notes: String,
+    val language: String = "en-US"
 )
 
 fun MovieEntity.toExternalModel() = Movie(
@@ -40,7 +41,8 @@ fun MovieEntity.toExternalModel() = Movie(
     status = status,
     purchaseDate = purchaseDate,
     pricePaid = pricePaid,
-    notes = notes
+    notes = notes,
+    language = language
 )
 
 fun Movie.toEntity() = MovieEntity(
@@ -59,5 +61,6 @@ fun Movie.toEntity() = MovieEntity(
     status = status,
     purchaseDate = purchaseDate,
     pricePaid = pricePaid,
-    notes = notes
+    notes = notes,
+    language = language
 )

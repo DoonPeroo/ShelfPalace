@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.shelfpalace.R
 import com.example.shelfpalace.data.AppTheme
+import com.example.shelfpalace.ui.theme.LocalAppTheme
+import com.example.shelfpalace.ui.theme.LoadedEmeraldGreen
 import com.example.shelfpalace.data.BackupData
 import com.example.shelfpalace.data.CornerStyle
 import com.example.shelfpalace.data.Game
@@ -141,8 +143,6 @@ fun SettingsScreen(
         }
     }
 
-    val lavender = com.example.shelfpalace.ui.theme.SynthwaveLavender
-
     val accentColor = MaterialTheme.colorScheme.primary
 
     Scaffold(
@@ -188,7 +188,7 @@ fun SettingsScreen(
                             Text(
                                 text = "Color Style",
                                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                color = Color.White,
+                                color = accentColor,
                                 modifier = Modifier.padding(start = 4.dp)
                             )
 
@@ -220,7 +220,7 @@ fun SettingsScreen(
                             Text(
                                 text = "Corner Shape",
                                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                color = Color.White,
+                                color = accentColor,
                                 modifier = Modifier.padding(start = 4.dp)
                             )
 
@@ -272,14 +272,14 @@ fun SettingsScreen(
                                 Icon(
                                     imageVector = if (isGamesExpanded) Icons.Rounded.ExpandMore else Icons.Rounded.ChevronRight,
                                     contentDescription = null,
-                                    tint = if (isGamesEnabled) accentColor else Color.Gray,
+                                    tint = if (isGamesEnabled) accentColor else Color.White.copy(alpha = 0.25f),
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = stringResource(R.string.header_games),
                                     style = MaterialTheme.typography.bodyLarge,
-                                    color = if (isGamesEnabled) Color.White else Color.Gray,
+                                    color = if (isGamesEnabled) accentColor else Color.White.copy(alpha = 0.25f),
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -322,14 +322,14 @@ fun SettingsScreen(
                                                 Icon(
                                                     imageVector = if (isExpanded) Icons.Rounded.ExpandMore else Icons.Rounded.ChevronRight,
                                                     contentDescription = null,
-                                                    tint = if (isEnabled && isGamesEnabled) accentColor else Color.Gray,
+                                                    tint = if (isEnabled && isGamesEnabled) accentColor else Color.White.copy(alpha = 0.25f),
                                                     modifier = Modifier.size(16.dp)
                                                 )
                                                 Spacer(modifier = Modifier.width(8.dp))
                                                 Text(
                                                     text = manufacturer.name,
                                                     style = MaterialTheme.typography.bodyLarge,
-                                                    color = if (isEnabled && isGamesEnabled) Color.White else Color.Gray,
+                                                    color = if (isEnabled && isGamesEnabled) accentColor else Color.White.copy(alpha = 0.25f),
                                                     fontWeight = FontWeight.Bold
                                                 )
                                             }
@@ -381,9 +381,9 @@ fun SettingsScreen(
             }
 
             item {
-                CompactSectionHeader(text = "Media Library Filters", color = lavender)
+                CompactSectionHeader(text = "Media Library Filters", color = accentColor)
                 NeonCard(
-                    color = lavender,
+                    color = accentColor,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column {
@@ -402,14 +402,14 @@ fun SettingsScreen(
                                     Icon(
                                         imageVector = if (isVideoExpanded) Icons.Rounded.ExpandMore else Icons.Rounded.ChevronRight,
                                         contentDescription = null,
-                                        tint = if (isMoviesEnabled) accentColor else Color.Gray,
+                                        tint = if (isMoviesEnabled) accentColor else Color.White.copy(alpha = 0.25f),
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = stringResource(R.string.header_movies),
                                         style = MaterialTheme.typography.bodyLarge,
-                                        color = if (isMoviesEnabled) Color.White else Color.Gray,
+                                        color = if (isMoviesEnabled) accentColor else Color.White.copy(alpha = 0.25f),
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
@@ -465,14 +465,14 @@ fun SettingsScreen(
                                     Icon(
                                         imageVector = if (isMusicExpanded) Icons.Rounded.ExpandMore else Icons.Rounded.ChevronRight,
                                         contentDescription = null,
-                                        tint = if (isMusicEnabled) accentColor else Color.Gray,
+                                        tint = if (isMusicEnabled) accentColor else Color.White.copy(alpha = 0.25f),
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = stringResource(R.string.header_music),
                                         style = MaterialTheme.typography.bodyLarge,
-                                        color = if (isMusicEnabled) Color.White else Color.Gray,
+                                        color = if (isMusicEnabled) accentColor else Color.White.copy(alpha = 0.25f),
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
@@ -883,20 +883,27 @@ fun SettingsToggleRow(
     label: String,
     isEnabled: Boolean,
     onToggle: (Boolean) -> Unit,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    color: Color = MaterialTheme.colorScheme.primary
 ) {
+    val isCyberGreen = LocalAppTheme.current == AppTheme.CYBER_GREEN
+    val activeTextColor = if (isCyberGreen) LoadedEmeraldGreen else color
+    val disabledTextColor = Color.White.copy(alpha = 0.25f)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 1.dp),
+            .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyLarge,
-            color = if (enabled && isEnabled) Color.White else Color.Gray
+            color = if (enabled && isEnabled) activeTextColor else disabledTextColor,
+            fontWeight = if (enabled && isEnabled) FontWeight.SemiBold else FontWeight.Normal
         )
+
         NeonSwitch(
             checked = isEnabled,
             onCheckedChange = onToggle,
@@ -925,12 +932,14 @@ fun NeonSwitch(
         label = "thumbOffset"
     )
     
-    // We use the secondary color for the active state to match the settings theme
-    val activeColor = MaterialTheme.colorScheme.secondary
-    val trackColor = if (checked) activeColor.copy(alpha = 0.3f) else Color.DarkGray.copy(alpha = 0.5f)
-    val thumbColor = if (checked) activeColor else Color.Gray
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val isCyberGreen = LocalAppTheme.current == AppTheme.CYBER_GREEN
+    val activeColor = if (isCyberGreen) LoadedEmeraldGreen else primaryColor
 
-    // Ensure we use a larger radius for the track to make it clearly square/round
+    val trackColor = if (checked) activeColor.copy(alpha = 0.35f) else Color(0xFF1E243D)
+    val thumbColor = if (checked) activeColor else Color(0xFFA0AEC0)
+    val borderColor = if (checked) activeColor else Color(0xFF6A789A)
+
     val trackRadius = 12.dp 
     val thumbRadius = 6.dp
 
@@ -939,7 +948,7 @@ fun NeonSwitch(
             .scale(scale)
             .size(trackWidth, trackHeight)
             .background(if (enabled) trackColor else trackColor.copy(alpha = 0.2f), getAppCorners(trackRadius))
-            .border(1.5.dp, if (enabled) thumbColor.copy(alpha = 0.5f) else Color.Transparent, getAppCorners(trackRadius))
+            .border(1.5.dp, if (enabled) borderColor else Color.Transparent, getAppCorners(trackRadius))
             .clickable(enabled = enabled && onCheckedChange != null) { 
                 onCheckedChange?.invoke(!checked) 
             },
@@ -949,7 +958,7 @@ fun NeonSwitch(
             modifier = Modifier
                 .offset { androidx.compose.ui.unit.IntOffset(thumbOffset.roundToPx(), 0) }
                 .size(thumbSize)
-                .background(if (enabled) thumbColor else thumbColor.copy(alpha = 0.3f), getAppCorners(thumbRadius))
+                .background(if (enabled) thumbColor else thumbColor.copy(alpha = 0.4f), getAppCorners(thumbRadius))
         )
     }
 }

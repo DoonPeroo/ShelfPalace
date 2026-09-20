@@ -59,7 +59,10 @@ data class Movie(
     val purchaseDate: String = "",
     val pricePaid: String = "",
     val notes: String = "",
-    val language: String = "en-US"
+    val language: String = "en-US",
+    val tomatometer: Int? = null,
+    val popcornmeter: Int? = null,
+    val tmdbRating: Double? = null
 )
 
 @Serializable

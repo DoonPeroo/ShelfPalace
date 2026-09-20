@@ -224,7 +224,10 @@ fun AddEditMovieScreen(
                     purchaseDate = purchaseDate,
                     pricePaid = pricePaid,
                     notes = existingMovie?.notes ?: "",
-                    language = currentLanguage
+                    language = currentLanguage,
+                    tomatometer = existingMovie?.tomatometer,
+                    popcornmeter = existingMovie?.popcornmeter,
+                    tmdbRating = existingMovie?.tmdbRating
                 )
                 withContext(NonCancellable) {
                     if (isCurrentlyEditing) {

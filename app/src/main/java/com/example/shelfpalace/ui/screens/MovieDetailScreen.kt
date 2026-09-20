@@ -1,6 +1,5 @@
 package com.example.shelfpalace.ui.screens
 
-import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -36,6 +35,7 @@ import coil.compose.AsyncImage
 import com.example.shelfpalace.R
 import com.example.shelfpalace.data.Movie
 import com.example.shelfpalace.data.MovieRepository
+import com.example.shelfpalace.data.remote.RottenTomatoesService
 import com.example.shelfpalace.data.remote.TmdbService
 import com.example.shelfpalace.data.remote.TmdbVideo
 import com.example.shelfpalace.ui.components.*
@@ -45,6 +45,7 @@ import com.example.shelfpalace.util.StorageUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,6 +61,7 @@ fun MovieDetailScreen(
     val movie by repository.getMovieStream(movieId).collectAsStateWithLifecycle(initialValue = null)
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     var selectedImageIndex by remember { mutableStateOf<Int?>(null) }
+    var showCoverFullscreen by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val accentColor = MaterialTheme.colorScheme.primary
     
@@ -68,9 +70,11 @@ fun MovieDetailScreen(
     var isMediaLoading by remember { mutableStateOf(false) }
     var selectedVideoId by remember { mutableStateOf<String?>(null) }
     var selectedVideoTitle by remember { mutableStateOf("") }
-    var selectedMediaLanguage by remember { mutableStateOf("en-US") }
+    var fetchedTmdbRating by remember { mutableStateOf<String?>(null) }
+    var fetchedTomatometer by remember { mutableStateOf<Int?>(null) }
+    var fetchedPopcornmeter by remember { mutableStateOf<Int?>(null) }
     
-    var selectedTabIndex by remember { mutableStateOf(0) }
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabs = listOf("Info", "Media", "My Details")
 
     var statusExpanded by remember { mutableStateOf(false) }
@@ -84,28 +88,69 @@ fun MovieDetailScreen(
             editingNotes = currentMovie.notes
         }
 
-        LaunchedEffect(currentMovie.language) {
-            if (currentMovie.language.isNotBlank()) {
-                selectedMediaLanguage = currentMovie.language
-            }
-        }
-
-        LaunchedEffect(currentMovie.title, currentMovie.releaseDate, selectedMediaLanguage) {
+        LaunchedEffect(currentMovie.title, currentMovie.releaseDate, currentMovie.language) {
             screenshots = emptyList()
             videos = emptyList()
+            fetchedTmdbRating = currentMovie.tmdbRating?.let { String.format(Locale.US, "%.1f", it) }
+            fetchedTomatometer = currentMovie.tomatometer
+            fetchedPopcornmeter = currentMovie.popcornmeter
+
             if (currentMovie.title.isNotBlank()) {
                 isMediaLoading = true
                 try {
                     val yearPart = currentMovie.releaseDate.take(4)
-                    val (images, vids) = withContext(Dispatchers.IO) {
-                        TmdbService.fetchMovieMedia(
-                            movieTitle = currentMovie.title,
-                            releaseYear = yearPart,
-                            language = selectedMediaLanguage
+                    val movieLanguage = currentMovie.language.ifBlank { "en-US" }
+
+                    var newTmdbRating = currentMovie.tmdbRating
+                    val searchRes = withContext(Dispatchers.IO) {
+                        TmdbService.search(
+                            query = currentMovie.title,
+                            year = yearPart,
+                            language = movieLanguage
                         )
                     }
-                    screenshots = images.mapNotNull { it.fullUrl }
-                    videos = vids
+                    val firstMovie = searchRes.results.firstOrNull()
+                    if (firstMovie?.voteAverage != null && firstMovie.voteAverage > 0.0) {
+                        newTmdbRating = firstMovie.voteAverage
+                        fetchedTmdbRating = String.format(Locale.US, "%.1f", firstMovie.voteAverage)
+                    }
+                    if (firstMovie?.id != null) {
+                        val (images, vids) = withContext(Dispatchers.IO) {
+                            TmdbService.fetchMovieMediaById(firstMovie.id, language = movieLanguage)
+                        }
+                        screenshots = images.mapNotNull { it.fullUrl }
+                        videos = vids
+                    }
+
+                    // Fetch Rotten Tomatoes ratings
+                    val rtRating = RottenTomatoesService.fetchRatings(
+                        title = currentMovie.title,
+                        releaseYear = yearPart
+                    )
+
+                    var newTomatometer = currentMovie.tomatometer
+                    var newPopcornmeter = currentMovie.popcornmeter
+
+                    if (rtRating.tomatometer != null) {
+                        newTomatometer = rtRating.tomatometer
+                        fetchedTomatometer = rtRating.tomatometer
+                    }
+                    if (rtRating.popcornmeter != null) {
+                        newPopcornmeter = rtRating.popcornmeter
+                        fetchedPopcornmeter = rtRating.popcornmeter
+                    }
+
+                    // Update movie in repository if any rating changed
+                    if (newTomatometer != currentMovie.tomatometer ||
+                        newPopcornmeter != currentMovie.popcornmeter ||
+                        newTmdbRating != currentMovie.tmdbRating) {
+                        val updatedMovie = currentMovie.copy(
+                            tomatometer = newTomatometer,
+                            popcornmeter = newPopcornmeter,
+                            tmdbRating = newTmdbRating
+                        )
+                        repository.updateMovie(updatedMovie)
+                    }
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
@@ -214,10 +259,13 @@ fun MovieDetailScreen(
                             model = currentMovie.coverUri.ifEmpty { "https://via.placeholder.com/150x215?text=${currentMovie.title}" },
                             contentDescription = currentMovie.title,
                             modifier = Modifier
-                                .width(140.dp)
+                                .width(165.dp)
                                 .aspectRatio(0.7f)
                                 .clip(getAppCorners(12.dp))
-                                .border(1.dp, accentColor.copy(alpha = 0.5f), getAppCorners(12.dp)),
+                                .border(1.dp, accentColor.copy(alpha = 0.5f), getAppCorners(12.dp))
+                                .clickable(enabled = currentMovie.coverUri.isNotEmpty()) {
+                                    showCoverFullscreen = true
+                                },
                             contentScale = ContentScale.Crop
                         )
 
@@ -264,14 +312,19 @@ fun MovieDetailScreen(
                             .padding(vertical = 12.dp)
                     ) {
                         when (selectedTabIndex) {
-                            0 -> MovieInfoTab(currentMovie, accentColor, onFormatClick)
+                            0 -> MovieInfoTab(
+                                movie = currentMovie,
+                                accentColor = accentColor,
+                                onFormatClick = onFormatClick,
+                                rating = fetchedTmdbRating,
+                                tomatometer = fetchedTomatometer,
+                                popcornmeter = fetchedPopcornmeter
+                            )
                             1 -> MovieMediaTab(
                                 accentColor = accentColor,
                                 screenshots = screenshots,
                                 videos = videos,
                                 isLoading = isMediaLoading,
-                                selectedLanguage = selectedMediaLanguage,
-                                onLanguageChanged = { selectedMediaLanguage = it },
                                 onImageClick = { selectedImageIndex = it },
                                 onVideoClick = { vId, vTitle ->
                                     selectedVideoId = vId
@@ -353,10 +406,28 @@ fun MovieDetailScreen(
             accentColor = accentColor
         )
     }
+
+    if (showCoverFullscreen) {
+        movie?.coverUri?.takeIf { it.isNotEmpty() }?.let { cover ->
+            FullscreenImageDialog(
+                screenshots = listOf(cover),
+                initialIndex = 0,
+                onDismiss = { showCoverFullscreen = false },
+                accentColor = accentColor
+            )
+        }
+    }
 }
 
 @Composable
-fun MovieInfoTab(movie: Movie, accentColor: Color, onFormatClick: (String) -> Unit) {
+fun MovieInfoTab(
+    movie: Movie,
+    accentColor: Color,
+    onFormatClick: (String) -> Unit,
+    rating: String? = null,
+    tomatometer: Int? = null,
+    popcornmeter: Int? = null
+) {
     val (formatLabel, formatIcon) = when(movie.formatId) {
         "vhs" -> "VHS" to Icons.Rounded.Videocam
         "laserdisc" -> "LaserDisc" to Icons.Rounded.DiscFull
@@ -369,6 +440,9 @@ fun MovieInfoTab(movie: Movie, accentColor: Color, onFormatClick: (String) -> Un
         "bluray4k" -> "4K Blu-ray" to Icons.Rounded.HighQuality
         else -> "Unknown" to Icons.Rounded.Movie
     }
+
+    val effectiveTomatometer = tomatometer ?: movie.tomatometer
+    val effectivePopcornmeter = popcornmeter ?: movie.popcornmeter
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         // Info Card
@@ -414,6 +488,36 @@ fun MovieInfoTab(movie: Movie, accentColor: Color, onFormatClick: (String) -> Un
                     value = DateUtils.formatDisplayDate(movie.releaseDate).ifEmpty { "None" }, 
                     color = accentColor
                 )
+
+                if (!rating.isNullOrBlank()) {
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
+                    InfoRow(
+                        icon = Icons.Rounded.Star,
+                        label = "Rating (TMDb)",
+                        value = "⭐️ $rating / 10",
+                        color = Color(0xFFFFC107)
+                    )
+                }
+
+                if (effectiveTomatometer != null) {
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
+                    InfoRowWithEmoji(
+                        emoji = "🍅",
+                        label = "Tomatometer (Critics)",
+                        value = "$effectiveTomatometer%" + (if (effectiveTomatometer >= 60) " • Fresh" else " • Rotten"),
+                        valueColor = if (effectiveTomatometer >= 60) Color(0xFFFF3D00) else Color(0xFF8BC34A)
+                    )
+                }
+
+                if (effectivePopcornmeter != null) {
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
+                    InfoRowWithEmoji(
+                        emoji = "🍿",
+                        label = "Popcornmeter (Audience)",
+                        value = "$effectivePopcornmeter%" + (if (effectivePopcornmeter >= 60) " • Fresh" else " • Spilled"),
+                        valueColor = if (effectivePopcornmeter >= 60) Color(0xFFFFC107) else Color(0xFF9E9E9E)
+                    )
+                }
             }
         }
 
@@ -448,34 +552,15 @@ fun MovieMediaTab(
     screenshots: List<String>,
     videos: List<TmdbVideo>,
     isLoading: Boolean,
-    selectedLanguage: String,
-    onLanguageChanged: (String) -> Unit,
     onImageClick: (Int) -> Unit,
     onVideoClick: (String, String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // TRAILERS & VIDEOS SECTION HEADER WITH LANGUAGE TOGGLE
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "Trailers & Videos",
-                style = MaterialTheme.typography.titleMedium.copy(color = Color.White, fontWeight = FontWeight.Bold)
-            )
-
-            NeonToggle(
-                options = listOf("EN", "DE"),
-                selectedOption = if (selectedLanguage == "de-DE") "DE" else "EN",
-                onOptionSelected = { choice ->
-                    onLanguageChanged(if (choice == "DE") "de-DE" else "en-US")
-                },
-                modifier = Modifier.width(110.dp),
-                height = 28.dp,
-                color = accentColor
-            )
-        }
+        // TRAILERS & VIDEOS SECTION
+        Text(
+            "Trailers & Videos",
+            style = MaterialTheme.typography.titleMedium.copy(color = Color.White, fontWeight = FontWeight.Bold)
+        )
 
         if (isLoading) {
             Box(

@@ -81,6 +81,51 @@ fun InfoRow(
 }
 
 @Composable
+fun InfoRowWithEmoji(
+    emoji: String,
+    label: String,
+    value: String,
+    valueColor: Color = Color.White,
+    onClick: (() -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = onClick != null) { onClick?.invoke() }
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier.size(20.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = emoji,
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 16.sp)
+            )
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Column {
+            Text(
+                text = label.uppercase(),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                )
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = valueColor,
+                    fontWeight = FontWeight.SemiBold
+                )
+            )
+        }
+    }
+}
+
+@Composable
 fun DetailRow(
     icon: ImageVector,
     label: String,

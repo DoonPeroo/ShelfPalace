@@ -571,7 +571,7 @@ fun SettingsScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "ver. BETA 0.88",
+                        text = "ver. BETA 0.90",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.sp

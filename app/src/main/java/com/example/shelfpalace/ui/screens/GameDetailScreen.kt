@@ -77,6 +77,7 @@ fun GameDetailScreen(
     val game by repository.getGameStream(gameId).collectAsStateWithLifecycle(initialValue = null)
     var showDeleteConfirmation by remember { mutableStateOf(value = false) }
     var selectedImageIndex by remember { mutableStateOf<Int?>(null) }
+    var showCoverFullscreen by remember { mutableStateOf(false) }
     var selectedVideoId by remember { mutableStateOf<String?>(null) }
     var selectedVideoTitle by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
@@ -267,10 +268,13 @@ fun GameDetailScreen(
                             model = currentGame.coverUri.ifEmpty { "https://via.placeholder.com/150x215?text=${currentGame.title}" },
                             contentDescription = currentGame.title,
                             modifier = Modifier
-                                .width(140.dp)
+                                .width(165.dp)
                                 .aspectRatio(0.7f)
                                 .clip(getAppCorners(12.dp))
-                                .border(1.dp, accentColor.copy(alpha = 0.5f), getAppCorners(12.dp)),
+                                .border(1.dp, accentColor.copy(alpha = 0.5f), getAppCorners(12.dp))
+                                .clickable(enabled = currentGame.coverUri.isNotEmpty()) {
+                                    showCoverFullscreen = true
+                                },
                             contentScale = ContentScale.Crop
                         )
 
@@ -394,6 +398,17 @@ fun GameDetailScreen(
             onDismiss = { selectedImageIndex = null },
             accentColor = accentColor
         )
+    }
+
+    if (showCoverFullscreen) {
+        game?.coverUri?.takeIf { it.isNotEmpty() }?.let { cover ->
+            FullscreenImageDialog(
+                screenshots = listOf(cover),
+                initialIndex = 0,
+                onDismiss = { showCoverFullscreen = false },
+                accentColor = accentColor
+            )
+        }
     }
 
     selectedVideoId?.let { videoId ->

@@ -22,7 +22,10 @@ data class MovieEntity(
     val purchaseDate: String = "",
     val pricePaid: String = "",
     val notes: String,
-    val language: String = "en-US"
+    val language: String = "en-US",
+    val tomatometer: Int? = null,
+    val popcornmeter: Int? = null,
+    val tmdbRating: Double? = null
 )
 
 fun MovieEntity.toExternalModel() = Movie(
@@ -42,7 +45,10 @@ fun MovieEntity.toExternalModel() = Movie(
     purchaseDate = purchaseDate,
     pricePaid = pricePaid,
     notes = notes,
-    language = language
+    language = language,
+    tomatometer = tomatometer,
+    popcornmeter = popcornmeter,
+    tmdbRating = tmdbRating
 )
 
 fun Movie.toEntity() = MovieEntity(
@@ -62,5 +68,8 @@ fun Movie.toEntity() = MovieEntity(
     purchaseDate = purchaseDate,
     pricePaid = pricePaid,
     notes = notes,
-    language = language
+    language = language,
+    tomatometer = tomatometer,
+    popcornmeter = popcornmeter,
+    tmdbRating = tmdbRating
 )

@@ -555,70 +555,6 @@ fun MovieMediaTab(
     onVideoClick: (String, String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // TRAILERS & VIDEOS SECTION
-        Text(
-            "Trailers & Videos",
-            style = MaterialTheme.typography.titleMedium.copy(color = Color.White, fontWeight = FontWeight.Bold)
-        )
-
-        if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = accentColor, modifier = Modifier.size(28.dp))
-            }
-        } else if (videos.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(90.dp)
-                    .background(Color.White.copy(alpha = 0.05f), getAppCorners(8.dp))
-                    .border(1.dp, Color.White.copy(alpha = 0.1f), getAppCorners(8.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("No videos available", color = Color.White.copy(alpha = 0.4f), style = MaterialTheme.typography.bodySmall)
-            }
-        } else {
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(videos) { video ->
-                    Box(
-                        modifier = Modifier
-                            .size(width = 200.dp, height = 112.dp)
-                            .clip(getAppCorners(12.dp))
-                            .border(1.dp, accentColor.copy(alpha = 0.5f), getAppCorners(12.dp))
-                            .clickable { video.key?.let { onVideoClick(it, video.name ?: "Trailer") } },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        AsyncImage(
-                            model = video.thumbnailUrl,
-                            contentDescription = video.name,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .background(Color.Black.copy(alpha = 0.6f), CircleShape)
-                                .border(1.dp, accentColor, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.PlayArrow,
-                                contentDescription = "Play",
-                                tint = Color.White,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
         // SCREENSHOTS & STILLS SECTION
         Text(
             "Screenshots & Stills",
@@ -651,8 +587,7 @@ fun MovieMediaTab(
             }
         } else {
             LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 16.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 itemsIndexed(screenshots) { index, url ->
                     AsyncImage(
@@ -665,6 +600,71 @@ fun MovieMediaTab(
                             .clickable { onImageClick(index) },
                         contentScale = ContentScale.Crop
                     )
+                }
+            }
+        }
+
+        // TRAILERS & VIDEOS SECTION
+        Text(
+            "Trailers & Videos",
+            style = MaterialTheme.typography.titleMedium.copy(color = Color.White, fontWeight = FontWeight.Bold)
+        )
+
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = accentColor, modifier = Modifier.size(28.dp))
+            }
+        } else if (videos.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(90.dp)
+                    .background(Color.White.copy(alpha = 0.05f), getAppCorners(8.dp))
+                    .border(1.dp, Color.White.copy(alpha = 0.1f), getAppCorners(8.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("No videos available", color = Color.White.copy(alpha = 0.4f), style = MaterialTheme.typography.bodySmall)
+            }
+        } else {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                items(videos) { video ->
+                    Box(
+                        modifier = Modifier
+                            .size(width = 200.dp, height = 112.dp)
+                            .clip(getAppCorners(12.dp))
+                            .border(1.dp, accentColor.copy(alpha = 0.5f), getAppCorners(12.dp))
+                            .clickable { video.key?.let { onVideoClick(it, video.name ?: "Trailer") } },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AsyncImage(
+                            model = video.thumbnailUrl,
+                            contentDescription = video.name,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(Color.Black.copy(alpha = 0.6f), CircleShape)
+                                .border(1.dp, accentColor, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.PlayArrow,
+                                contentDescription = "Play",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
                 }
             }
         }

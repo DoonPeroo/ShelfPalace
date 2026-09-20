@@ -12,12 +12,10 @@ import com.example.shelfpalace.ui.components.NeonIconButton
 import com.example.shelfpalace.ui.components.getAppCorners
 import com.example.shelfpalace.ui.theme.LocalAppTheme
 import com.example.shelfpalace.ui.theme.LocalCornerStyle
-import com.example.shelfpalace.ui.theme.LoadedCardBorder
 import com.example.shelfpalace.ui.theme.LoadedEmeraldGreen
 import com.example.shelfpalace.ui.theme.LoadedSurfaceNavy
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*

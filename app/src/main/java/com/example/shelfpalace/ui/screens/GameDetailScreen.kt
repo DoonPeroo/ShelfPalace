@@ -6,14 +6,24 @@ import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.Build
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
+import android.widget.FrameLayout
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 
 import androidx.compose.foundation.BorderStroke
@@ -62,7 +72,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shelfpalace.data.remote.IgdbVideo
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -816,14 +825,34 @@ fun VideoPlayerDialog(
     var customView by remember { mutableStateOf<View?>(null) }
     var customViewCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
 
-    DisposableEffect(isFullscreen, customView) {
-        if (isFullscreen || customView != null) {
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        } else {
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+    // Configure Activity orientation, cutout mode, and system bars for fullscreen
+    DisposableEffect(activity, effectiveFullscreen, customView) {
+        if (activity != null) {
+            val window = activity.window
+            val controller = WindowCompat.getInsetsController(window, window.decorView)
+
+            if (effectiveFullscreen || customView != null) {
+                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                controller.hide(WindowInsetsCompat.Type.systemBars())
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    val params = window.attributes
+                    params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                    window.attributes = params
+                }
+            } else {
+                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                controller.show(WindowInsetsCompat.Type.systemBars())
+            }
         }
         onDispose {
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            if (activity != null) {
+                val window = activity.window
+                val controller = WindowCompat.getInsetsController(window, window.decorView)
+                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                controller.show(WindowInsetsCompat.Type.systemBars())
+            }
         }
     }
 
@@ -840,12 +869,32 @@ fun VideoPlayerDialog(
             },
             properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
         ) {
+            val dialogView = LocalView.current
+            SideEffect {
+                val dialogWindow = (dialogView.parent as? DialogWindowProvider)?.window
+                if (dialogWindow != null) {
+                    WindowCompat.setDecorFitsSystemWindows(dialogWindow, false)
+                    dialogWindow.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT)
+                    dialogWindow.setGravity(Gravity.CENTER)
+                    ViewCompat.setOnApplyWindowInsetsListener(dialogView) { _, _ ->
+                        WindowInsetsCompat.CONSUMED
+                    }
+                    val controller = WindowCompat.getInsetsController(dialogWindow, dialogView)
+                    controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    controller.hide(WindowInsetsCompat.Type.systemBars())
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        val params = dialogWindow.attributes
+                        params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                        dialogWindow.attributes = params
+                    }
+                }
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black)
-                    .statusBarsPadding()
-                    .padding(top = if (isLandscape) 0.dp else 12.dp)
+                    .background(Color.Black),
+                contentAlignment = Alignment.Center
             ) {
                 AndroidView(
                     factory = { _ ->
@@ -864,16 +913,17 @@ fun VideoPlayerDialog(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
+            setBackgroundColor(android.graphics.Color.BLACK)
             setLayerType(View.LAYER_TYPE_HARDWARE, null)
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.allowFileAccess = true
             settings.allowContentAccess = true
             settings.mediaPlaybackRequiresUserGesture = false
-            settings.useWideViewPort = true
-            settings.loadWithOverviewMode = true
+            settings.useWideViewPort = false
+            settings.loadWithOverviewMode = false
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-            settings.userAgentString = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+            settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
             webChromeClient = object : WebChromeClient() {
                 override fun getDefaultVideoPoster(): Bitmap {
                     return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
@@ -881,25 +931,16 @@ fun VideoPlayerDialog(
 
                 override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
                     super.onShowCustomView(view, callback)
-                    customView = view
-                    customViewCallback = callback
-                    postDelayed({
-                        evaluateJavascript("javascript:(function() { var p = document.getElementById('player'); if (p && p.contentWindow) { p.contentWindow.postMessage('{\"event\":\"command\",\"func\":\"playVideo\",\"args\":\"\"}', '*'); } })()", null)
-                    }, 150)
+                    isFullscreen = true
+                    try {
+                        callback?.onCustomViewHidden()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }
 
                 override fun onHideCustomView() {
                     super.onHideCustomView()
-                    try {
-                        customViewCallback?.onCustomViewHidden()
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                    customView = null
-                    customViewCallback = null
-                    postDelayed({
-                        evaluateJavascript("javascript:(function() { var p = document.getElementById('player'); if (p && p.contentWindow) { p.contentWindow.postMessage('{\"event\":\"command\",\"func\":\"playVideo\",\"args\":\"\"}', '*'); } })()", null)
-                    }, 150)
                 }
             }
             webViewClient = object : WebViewClient() {
@@ -910,24 +951,82 @@ fun VideoPlayerDialog(
                     }
                     return false
                 }
+
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    val jsHide = """
+                        (function() {
+                            var hideStyle = document.createElement('style');
+                            hideStyle.innerHTML = '.ytp-youtube-button, .ytp-impression-link, .ytp-watermark, .ytp-title-link { display: none !important; opacity: 0 !important; pointer-events: none !important; }';
+                            document.head.appendChild(hideStyle);
+                            
+                            setInterval(function() {
+                                var btns = document.querySelectorAll('.ytp-youtube-button, .ytp-impression-link, .ytp-watermark, .ytp-title-link');
+                                for (var i = 0; i < btns.length; i++) {
+                                    btns[i].style.display = 'none';
+                                    btns[i].style.opacity = '0';
+                                    btns[i].style.pointerEvents = 'none';
+                                }
+                            }, 500);
+                        })();
+                    """.trimIndent()
+                    view?.evaluateJavascript(jsHide, null)
+                }
             }
 
             val htmlData = """
                 <!DOCTYPE html>
                 <html>
                 <head>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
                 <style>
-                  * { margin: 0; padding: 0; box-sizing: border-box; }
-                  html, body { width: 100vw; height: 100vh; background-color: #000000; overflow: hidden; display: flex; justify-content: center; align-items: center; }
-                  .video-container { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
-                  iframe { width: 100%; height: 100%; border: 0; }
+                  * {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    box-sizing: border-box !important;
+                  }
+                  :root {
+                    --sat: 0px !important;
+                    --sar: 0px !important;
+                    --sab: 0px !important;
+                    --sal: 0px !important;
+                    --safe-area-inset-top: 0px !important;
+                    --safe-area-inset-right: 0px !important;
+                    --safe-area-inset-bottom: 0px !important;
+                    --safe-area-inset-left: 0px !important;
+                  }
+                  html, body {
+                    width: 100% !important;
+                    height: 100% !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    background-color: #000000 !important;
+                    overflow: hidden !important;
+                  }
+                  .video-container {
+                    position: fixed !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    right: 0 !important;
+                    bottom: 0 !important;
+                    width: 100% !important;
+                    height: 100% !important;
+                    background-color: #000000 !important;
+                    display: flex !important;
+                    justify-content: center !important;
+                    align-items: center !important;
+                  }
+                  iframe {
+                    width: 100% !important;
+                    height: 100% !important;
+                    border: 0 !important;
+                  }
                 </style>
                 </head>
                 <body>
                   <div class="video-container">
                     <iframe id="player"
-                            src="https://www.youtube-nocookie.com/embed/$videoId?autoplay=1&playsinline=1&controls=1&enablejsapi=1"
+                            src="https://www.youtube-nocookie.com/embed/$videoId?autoplay=1&playsinline=1&controls=1&enablejsapi=1&rel=0&modestbranding=1"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                             allowfullscreen></iframe>
                   </div>
@@ -955,6 +1054,31 @@ fun VideoPlayerDialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
     ) {
+        val dialogView = LocalView.current
+        SideEffect {
+            val dialogWindow = (dialogView.parent as? DialogWindowProvider)?.window
+            if (dialogWindow != null) {
+                WindowCompat.setDecorFitsSystemWindows(dialogWindow, false)
+                dialogWindow.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT)
+                dialogWindow.setGravity(Gravity.CENTER)
+                ViewCompat.setOnApplyWindowInsetsListener(dialogView) { _, _ ->
+                    WindowInsetsCompat.CONSUMED
+                }
+                val controller = WindowCompat.getInsetsController(dialogWindow, dialogView)
+                if (effectiveFullscreen) {
+                    controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    controller.hide(WindowInsetsCompat.Type.systemBars())
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        val params = dialogWindow.attributes
+                        params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                        dialogWindow.attributes = params
+                    }
+                } else {
+                    controller.show(WindowInsetsCompat.Type.systemBars())
+                }
+            }
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -975,6 +1099,10 @@ fun VideoPlayerDialog(
                         .border(1.dp, accentColor, getAppCorners(12.dp))
                 },
                 update = { view ->
+                    view.layoutParams = FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
                     view.requestLayout()
                     view.invalidate()
                     view.postDelayed({
@@ -1006,7 +1134,16 @@ fun VideoPlayerDialog(
                             )
                         }
                     )
-                    .statusBarsPadding()
+                    .then(
+                        if (effectiveFullscreen) {
+                            Modifier
+                                .displayCutoutPadding()
+                                .statusBarsPadding()
+                                .padding(top = 8.dp)
+                        } else {
+                            Modifier.statusBarsPadding()
+                        }
+                    )
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically

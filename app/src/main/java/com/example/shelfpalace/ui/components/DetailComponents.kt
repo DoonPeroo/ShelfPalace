@@ -32,6 +32,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.os.Build
+import android.view.Gravity
+import android.view.WindowManager
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
@@ -298,6 +306,24 @@ fun FullscreenImageDialog(
             dismissOnBackPress = true
         )
     ) {
+        val dialogView = LocalView.current
+        SideEffect {
+            val dialogWindow = (dialogView.parent as? DialogWindowProvider)?.window
+            if (dialogWindow != null) {
+                WindowCompat.setDecorFitsSystemWindows(dialogWindow, false)
+                dialogWindow.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT)
+                dialogWindow.setGravity(Gravity.CENTER)
+                ViewCompat.setOnApplyWindowInsetsListener(dialogView) { _, _ ->
+                    WindowInsetsCompat.CONSUMED
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    val params = dialogWindow.attributes
+                    params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                    dialogWindow.attributes = params
+                }
+            }
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxSize()

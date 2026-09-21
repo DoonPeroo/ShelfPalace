@@ -64,6 +64,7 @@ fun AddEditMusicScreen(
     
     var currentFormatId by rememberSaveable { mutableStateOf(formatId ?: "") }
     var title by rememberSaveable { mutableStateOf("") }
+    var barcode by rememberSaveable { mutableStateOf("") }
     var artist by rememberSaveable { mutableStateOf("") }
     var releaseDate by rememberSaveable { mutableStateOf("") }
     var displayDate by rememberSaveable { mutableStateOf("") }
@@ -128,7 +129,8 @@ fun AddEditMusicScreen(
                     status = existingMusic?.status ?: "Plan to listen",
                     purchaseDate = purchaseDate,
                     pricePaid = pricePaid,
-                    notes = existingMusic?.notes ?: ""
+                    notes = existingMusic?.notes ?: "",
+                    barcode = barcode.takeIf { it.isNotBlank() }
                 )
                 withContext(NonCancellable) {
                     if (isCurrentlyEditing) {
@@ -183,6 +185,7 @@ fun AddEditMusicScreen(
                 existingMusic = it
                 currentFormatId = it.formatId
                 title = it.title
+                barcode = it.barcode ?: ""
                 artist = it.artist
                 releaseDate = it.releaseDate
                 genre = it.genre
@@ -380,6 +383,17 @@ fun AddEditMusicScreen(
                         value = title,
                         onValueChange = { title = it },
                         label = { Text(stringResource(R.string.label_title)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = getAppCorners(8.dp),
+                        colors = synthwaveTextFieldColors(musicColor)
+                    )
+
+                    OutlinedTextField(
+                        value = barcode,
+                        onValueChange = { barcode = it },
+                        label = { Text("Barcode / EAN") },
+                        placeholder = { Text("z. B. 4006209000000") },
+                        singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = getAppCorners(8.dp),
                         colors = synthwaveTextFieldColors(musicColor)

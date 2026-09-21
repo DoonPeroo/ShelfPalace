@@ -436,6 +436,9 @@ fun MainApp(
                         onMusicSelected = { musicId ->
                             navController.navigate(Destinations.MusicDetail(musicId))
                         },
+                        onScanClick = {
+                            navController.navigate(Destinations.Scanner)
+                        },
                         onBack = { navController.popBackStack() }
                     )
                 }

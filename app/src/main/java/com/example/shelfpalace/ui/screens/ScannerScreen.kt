@@ -12,6 +12,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.FlashlightOff
 import androidx.compose.material.icons.rounded.FlashlightOn
@@ -19,6 +20,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
@@ -29,21 +32,27 @@ import com.example.shelfpalace.data.GameRepository
 import com.example.shelfpalace.data.MovieRepository
 import com.example.shelfpalace.data.MusicRepository
 import com.example.shelfpalace.ui.components.*
-import com.example.shelfpalace.ui.theme.SynthwaveCyan
 import com.example.shelfpalace.ui.theme.SynthwaveLavender
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.google.mlkit.vision.barcode.BarcodeScanner
+import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.objects.DetectedObject
 import com.google.mlkit.vision.objects.ObjectDetection
 import com.google.mlkit.vision.objects.ObjectDetector
 import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -129,12 +138,12 @@ fun ScannerContent(
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     
-    var detectedObject by remember { mutableStateOf<com.google.mlkit.vision.objects.DetectedObject?>(null) }
+    var detectedObject by remember { mutableStateOf<DetectedObject?>(null) }
     var detectedText by remember { mutableStateOf("") }
-    var isScanning by remember { mutableStateOf(value = false) }
-    var flashEnabled by remember { mutableStateOf(value = false) }
-    var showNothingFound by remember { mutableStateOf(value = false) }
-    var internetSearching by remember { mutableStateOf(value = false) }
+    var detectedBarcode by remember { mutableStateOf("") }
+    var isScanning by remember { mutableStateOf(false) }
+    var flashEnabled by remember { mutableStateOf(false) }
+    var showNothingFound by remember { mutableStateOf(false) }
     
     val cameraExecutor: ExecutorService = remember { Executors.newSingleThreadExecutor() }
     
@@ -154,6 +163,10 @@ fun ScannerContent(
 
     val textRecognizer = remember {
         TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+    }
+
+    val barcodeScanner = remember {
+        BarcodeScanning.getClient()
     }
 
     val context = LocalContext.current
@@ -182,9 +195,10 @@ fun ScannerContent(
             .build()
             .also {
                 it.setAnalyzer(cameraExecutor) { imageProxy ->
-                    processImageProxy(objectDetector, textRecognizer, imageProxy) { obj, text ->
+                    processImageProxy(objectDetector, textRecognizer, barcodeScanner, imageProxy) { obj, text, barcode ->
                         detectedObject = obj
                         detectedText = text ?: ""
+                        detectedBarcode = barcode ?: ""
                     }
                 }
             }
@@ -208,12 +222,64 @@ fun ScannerContent(
         camera?.cameraControl?.enableTorch(flashEnabled)
     }
 
+    var lastScannedBarcode by remember { mutableStateOf("") }
+
     val resetScanner = {
         detectedObject = null
         detectedText = ""
+        detectedBarcode = ""
+        lastScannedBarcode = ""
         isScanning = false
-        internetSearching = false
         showNothingFound = false
+    }
+
+    LaunchedEffect(detectedBarcode) {
+        val cleanBarcode = detectedBarcode.trim()
+        if (cleanBarcode.isNotBlank() && !isScanning && cleanBarcode != lastScannedBarcode) {
+            isScanning = true
+            lastScannedBarcode = cleanBarcode
+
+            try {
+                val games = repository.getAllGames().first()
+                val movies = movieRepository.getAllMovies().first()
+                val musicList = musicRepository.getAllMusic().first()
+
+                var recognizedGameId: String? = null
+                var recognizedMovieId: String? = null
+                var recognizedMusicId: String? = null
+
+                // 1. Direct local barcode match
+                val bGame = games.find { isBarcodeMatch(it.barcode, cleanBarcode) }
+                val bMovie = movies.find { isBarcodeMatch(it.barcode, cleanBarcode) }
+                val bMusic = musicList.find { isBarcodeMatch(it.barcode, cleanBarcode) }
+
+                if (bGame != null) recognizedGameId = bGame.id
+                else if (bMovie != null) recognizedMovieId = bMovie.id
+                else if (bMusic != null) recognizedMusicId = bMusic.id
+
+                if (recognizedGameId != null) {
+                    delay(300)
+                    resetScanner()
+                    onGameRecognized(recognizedGameId)
+                } else if (recognizedMovieId != null) {
+                    delay(300)
+                    resetScanner()
+                    onMovieRecognized(recognizedMovieId)
+                } else if (recognizedMusicId != null) {
+                    delay(300)
+                    resetScanner()
+                    onMusicRecognized(recognizedMusicId)
+                } else {
+                    delay(300)
+                    isScanning = false
+                    showNothingFound = true
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                isScanning = false
+                showNothingFound = true
+            }
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -228,13 +294,13 @@ fun ScannerContent(
             }
         }
 
-        // Overlay for detected object
+        // Overlay frame
         val scanAccentColor = SynthwaveLavender
         Canvas(modifier = Modifier.fillMaxSize()) {
             val strokeWidth = 4.dp.toPx()
             val cornerLength = 40.dp.toPx()
-            val rectWidth = 300.dp.toPx()
-            val rectHeight = 400.dp.toPx()
+            val rectWidth = 280.dp.toPx()
+            val rectHeight = 380.dp.toPx()
             val left = (size.width - rectWidth) / 2
             val top = (size.height - rectHeight) / 2
             val right = left + rectWidth
@@ -242,27 +308,28 @@ fun ScannerContent(
 
             // Draw neon corners
             // Top Left
-            drawLine(scanAccentColor.copy(alpha = 0.6f), androidx.compose.ui.geometry.Offset(left, top), androidx.compose.ui.geometry.Offset(left + cornerLength, top), strokeWidth)
-            drawLine(scanAccentColor.copy(alpha = 0.6f), androidx.compose.ui.geometry.Offset(left, top), androidx.compose.ui.geometry.Offset(left, top + cornerLength), strokeWidth)
+            drawLine(scanAccentColor.copy(alpha = 0.8f), Offset(left, top), Offset(left + cornerLength, top), strokeWidth)
+            drawLine(scanAccentColor.copy(alpha = 0.8f), Offset(left, top), Offset(left, top + cornerLength), strokeWidth)
 
             // Top Right
-            drawLine(scanAccentColor.copy(alpha = 0.6f), androidx.compose.ui.geometry.Offset(right, top), androidx.compose.ui.geometry.Offset(right - cornerLength, top), strokeWidth)
-            drawLine(scanAccentColor.copy(alpha = 0.6f), androidx.compose.ui.geometry.Offset(right, top), androidx.compose.ui.geometry.Offset(right, top + cornerLength), strokeWidth)
+            drawLine(scanAccentColor.copy(alpha = 0.8f), Offset(right, top), Offset(right - cornerLength, top), strokeWidth)
+            drawLine(scanAccentColor.copy(alpha = 0.8f), Offset(right, top), Offset(right, top + cornerLength), strokeWidth)
 
             // Bottom Left
-            drawLine(scanAccentColor.copy(alpha = 0.6f), androidx.compose.ui.geometry.Offset(left, bottom), androidx.compose.ui.geometry.Offset(left + cornerLength, bottom), strokeWidth)
-            drawLine(scanAccentColor.copy(alpha = 0.6f), androidx.compose.ui.geometry.Offset(left, bottom), androidx.compose.ui.geometry.Offset(left, bottom - cornerLength), strokeWidth)
+            drawLine(scanAccentColor.copy(alpha = 0.8f), Offset(left, bottom), Offset(left + cornerLength, bottom), strokeWidth)
+            drawLine(scanAccentColor.copy(alpha = 0.8f), Offset(left, bottom), Offset(left, bottom - cornerLength), strokeWidth)
 
             // Bottom Right
-            drawLine(scanAccentColor.copy(alpha = 0.6f), androidx.compose.ui.geometry.Offset(right, bottom), androidx.compose.ui.geometry.Offset(right - cornerLength, bottom), strokeWidth)
-            drawLine(scanAccentColor.copy(alpha = 0.6f), androidx.compose.ui.geometry.Offset(right, bottom), androidx.compose.ui.geometry.Offset(right, bottom - cornerLength), strokeWidth)
+            drawLine(scanAccentColor.copy(alpha = 0.8f), Offset(right, bottom), Offset(right - cornerLength, bottom), strokeWidth)
+            drawLine(scanAccentColor.copy(alpha = 0.8f), Offset(right, bottom), Offset(right, bottom - cornerLength), strokeWidth)
             
-            // Subtle neon glow for the whole scan area if detected
-            if (detectedObject != null || detectedText.isNotBlank()) {
+            // Subtle neon glow
+            val hasDetection = detectedObject != null || detectedText.isNotBlank() || detectedBarcode.isNotBlank()
+            if (hasDetection) {
                 drawRect(
-                    color = scanAccentColor.copy(alpha = 0.1f),
-                    topLeft = androidx.compose.ui.geometry.Offset(left, top),
-                    size = androidx.compose.ui.geometry.Size(rectWidth, rectHeight)
+                    color = scanAccentColor.copy(alpha = 0.12f),
+                    topLeft = Offset(left, top),
+                    size = Size(rectWidth, rectHeight)
                 )
             }
         }
@@ -274,7 +341,7 @@ fun ScannerContent(
                 .statusBarsPadding()
                 .padding(top = 16.dp, start = 8.dp, end = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -301,129 +368,149 @@ fun ScannerContent(
             }
         }
 
-        // Bottom Scan Button and Home Button
+        // Bottom Controls
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-                .padding(bottom = 16.dp),
+                .padding(bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                val canScan = detectedObject != null || detectedText.isNotBlank()
+        ) {
+            val canScan = detectedObject != null || detectedText.isNotBlank() || detectedBarcode.isNotBlank()
 
-                if (canScan && !isScanning && !internetSearching) {
-                    val displayLabel = if (detectedText.isNotBlank()) {
-                        val firstLine = detectedText.split("\n").firstOrNull { it.isNotBlank() } ?: ""
-                        if (firstLine.length > 20) firstLine.take(20) + "..." else firstLine
-                    } else {
-                        detectedObject?.labels?.firstOrNull()?.text ?: "Object"
-                    }
-                    
-                    val readingColor = SynthwaveLavender
-                    Text(
-                        text = "Reading: $displayLabel",
-                        color = readingColor,
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), getAppCorners(20.dp)).padding(horizontal = 12.dp, vertical = 4.dp)
-                    )
-                    
-                    Button(
-                        onClick = {
+            if (canScan && !isScanning) {
+                val displayLabel = if (detectedBarcode.isNotBlank()) {
+                    "Barcode: $detectedBarcode"
+                } else if (detectedText.isNotBlank()) {
+                    val firstLine = detectedText.split("\n").firstOrNull { it.isNotBlank() } ?: ""
+                    if (firstLine.length > 20) firstLine.take(20) + "..." else firstLine
+                } else {
+                    detectedObject?.labels?.firstOrNull()?.text ?: "Cover Photo"
+                }
+                
+                Text(
+                    text = displayLabel,
+                    color = SynthwaveLavender,
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier
+                        .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(20.dp))
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                )
+                
+                Button(
+                    onClick = {
+                        if (!isScanning) {
                             isScanning = true
                             scope.launch {
-                                // IMAGE SEARCH LOGIC
-                                val words = detectedText.split(Regex("\\s+"))
-                                    .map { it.filter { char -> char.isLetterOrDigit() } }
-                                    .filter { it.length >= 2 }
-                                
-                                val games = repository.getAllGames().first()
-                                val movies = movieRepository.getAllMovies().first()
-                                val musicList = musicRepository.getAllMusic().first()
-                                
-                                var recognizedGameId: String? = null
-                                var recognizedMovieId: String? = null
-                                var recognizedMusicId: String? = null
+                                try {
+                                    val games = repository.getAllGames().first()
+                                    val movies = movieRepository.getAllMovies().first()
+                                    val musicList = musicRepository.getAllMusic().first()
 
-                                if (words.isNotEmpty()) {
-                                    val gameMatches = games.filter { game ->
-                                        words.any { word -> 
-                                            game.title.contains(word, ignoreCase = true) 
-                                        }
-                                    }
-                                    
-                                    val movieMatches = movies.filter { movie ->
-                                        words.any { word -> 
-                                            movie.title.contains(word, ignoreCase = true) 
-                                        }
+                                    var recognizedGameId: String? = null
+                                    var recognizedMovieId: String? = null
+                                    var recognizedMusicId: String? = null
+
+                                    val cleanBarcode = detectedBarcode.trim()
+                                    if (cleanBarcode.isNotBlank()) {
+                                        val bGame = games.find { isBarcodeMatch(it.barcode, cleanBarcode) }
+                                        val bMovie = movies.find { isBarcodeMatch(it.barcode, cleanBarcode) }
+                                        val bMusic = musicList.find { isBarcodeMatch(it.barcode, cleanBarcode) }
+
+                                        if (bGame != null) recognizedGameId = bGame.id
+                                        else if (bMovie != null) recognizedMovieId = bMovie.id
+                                        else if (bMusic != null) recognizedMusicId = bMusic.id
                                     }
 
-                                    val musicMatches = musicList.filter { music ->
-                                        words.any { word -> 
-                                            music.title.contains(word, ignoreCase = true) || 
-                                            music.artist.contains(word, ignoreCase = true)
-                                        }
-                                    }
-                                    
-                                    if (gameMatches.isNotEmpty() || movieMatches.isNotEmpty() || musicMatches.isNotEmpty()) {
-                                        val bestGame = gameMatches.maxByOrNull { game ->
-                                            words.count { word -> game.title.contains(word, ignoreCase = true) }
-                                        }
-                                        val bestMovie = movieMatches.maxByOrNull { movie ->
-                                            words.count { word -> movie.title.contains(word, ignoreCase = true) }
-                                        }
-                                        val bestMusic = musicMatches.maxByOrNull { music ->
-                                            words.count { word -> music.title.contains(word, ignoreCase = true) || music.artist.contains(word, ignoreCase = true) }
-                                        }
-                                        
-                                        val gameScore = bestGame?.let { g -> words.count { w -> g.title.contains(w, ignoreCase = true) } } ?: 0
-                                        val movieScore = bestMovie?.let { m -> words.count { w -> m.title.contains(w, ignoreCase = true) } } ?: 0
-                                        val musicScore = bestMusic?.let { m -> words.count { w -> m.title.contains(w, ignoreCase = true) || m.artist.contains(w, ignoreCase = true) } } ?: 0
-                                        
-                                        val maxScore = maxOf(gameScore, movieScore, musicScore)
-                                        
-                                        if (maxScore > 0) {
-                                            if (gameScore == maxScore && bestGame != null) {
-                                                recognizedGameId = bestGame.id
-                                            } else if (movieScore == maxScore && bestMovie != null) {
-                                                recognizedMovieId = bestMovie.id
-                                            } else if (bestMusic != null) {
-                                                recognizedMusicId = bestMusic.id
+                                    if (cleanBarcode.isBlank() && recognizedGameId == null && recognizedMovieId == null && recognizedMusicId == null && detectedText.isNotBlank()) {
+                                        val stopWords = setOf("dvd", "pal", "ntsc", "bluray", "disc", "game", "video", "media", "rated", "official", "nintendo", "playstation", "xbox", "sony", "sega", "made", "japan", "usa", "europe")
+                                        val words = detectedText.lowercase().split(Regex("\\s+"))
+                                            .map { it.filter { char -> char.isLetterOrDigit() } }
+                                            .filter { it.length >= 3 && !stopWords.contains(it) && !it.all { c -> c.isDigit() } }
+
+                                        if (words.isNotEmpty()) {
+                                            val gameMatches = games.filter { game ->
+                                                words.any { word -> game.title.contains(word, ignoreCase = true) }
+                                            }
+                                            val movieMatches = movies.filter { movie ->
+                                                words.any { word -> movie.title.contains(word, ignoreCase = true) }
+                                            }
+                                            val musicMatches = musicList.filter { music ->
+                                                words.any { word -> music.title.contains(word, ignoreCase = true) || music.artist.contains(word, ignoreCase = true) }
+                                            }
+
+                                            if (gameMatches.isNotEmpty() || movieMatches.isNotEmpty() || musicMatches.isNotEmpty()) {
+                                                val bestGame = gameMatches.maxByOrNull { game -> words.count { word -> game.title.contains(word, ignoreCase = true) } }
+                                                val bestMovie = movieMatches.maxByOrNull { movie -> words.count { word -> movie.title.contains(word, ignoreCase = true) } }
+                                                val bestMusic = musicMatches.maxByOrNull { music -> words.count { word -> music.title.contains(word, ignoreCase = true) || music.artist.contains(word, ignoreCase = true) } }
+
+                                                val gameScore = bestGame?.let { g -> words.count { w -> g.title.contains(w, ignoreCase = true) } } ?: 0
+                                                val movieScore = bestMovie?.let { m -> words.count { w -> m.title.contains(w, ignoreCase = true) } } ?: 0
+                                                val musicScore = bestMusic?.let { m -> words.count { w -> m.title.contains(w, ignoreCase = true) || m.artist.contains(w, ignoreCase = true) } } ?: 0
+
+                                                val maxScore = maxOf(gameScore, movieScore, musicScore)
+
+                                                if (maxScore > 0) {
+                                                    if (gameScore == maxScore && bestGame != null) recognizedGameId = bestGame.id
+                                                    else if (movieScore == maxScore && bestMovie != null) recognizedMovieId = bestMovie.id
+                                                    else if (bestMusic != null) recognizedMusicId = bestMusic.id
+                                                }
                                             }
                                         }
                                     }
-                                }
 
-                                if (recognizedGameId != null) {
-                                    kotlinx.coroutines.delay(800)
-                                    resetScanner()
-                                    onGameRecognized(recognizedGameId)
-                                } else if (recognizedMovieId != null) {
-                                    kotlinx.coroutines.delay(800)
-                                    resetScanner()
-                                    onMovieRecognized(recognizedMovieId)
-                                } else if (recognizedMusicId != null) {
-                                    kotlinx.coroutines.delay(800)
-                                    resetScanner()
-                                    onMusicRecognized(recognizedMusicId)
-                                } else {
-                                    kotlinx.coroutines.delay(1000)
+                                    if (recognizedGameId != null) {
+                                        delay(300)
+                                        resetScanner()
+                                        onGameRecognized(recognizedGameId)
+                                    } else if (recognizedMovieId != null) {
+                                        delay(300)
+                                        resetScanner()
+                                        onMovieRecognized(recognizedMovieId)
+                                    } else if (recognizedMusicId != null) {
+                                        delay(300)
+                                        resetScanner()
+                                        onMusicRecognized(recognizedMusicId)
+                                    } else {
+                                        delay(300)
+                                        isScanning = false
+                                        showNothingFound = true
+                                    }
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
                                     isScanning = false
                                     showNothingFound = true
                                 }
                             }
-                        },
-                        modifier = Modifier
-                            .height(64.dp)
-                            .width(200.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                    ) {
-                        Text(stringResource(R.string.action_scan), style = MaterialTheme.typography.titleLarge)
-                    }
+                        }
+                    },
+                    modifier = Modifier
+                        .height(56.dp)
+                        .width(220.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text(
+                        "SCAN PHOTO",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
                 }
+            } else if (!isScanning) {
+                Text(
+                    text = "KEEP COVER / PHOTO IN FRAME",
+                    color = Color.White.copy(alpha = 0.8f),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    ),
+                    modifier = Modifier
+                        .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                )
             }
+        }
         
-        if (isScanning || internetSearching) {
+        if (isScanning) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -434,7 +521,7 @@ fun ScannerContent(
                     CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        if (internetSearching) "SEARCHING INTERNET..." else "ANALYZING...",
+                        "ANALYZING...",
                         color = Color.White,
                         style = MaterialTheme.typography.labelLarge
                     )
@@ -452,22 +539,23 @@ fun ScannerContent(
 private fun processImageProxy(
     detector: ObjectDetector,
     textRecognizer: TextRecognizer,
+    barcodeScanner: BarcodeScanner,
     imageProxy: ImageProxy,
-    onDetected: (com.google.mlkit.vision.objects.DetectedObject?, String?) -> Unit
+    onDetected: (DetectedObject?, String?, String?) -> Unit
 ) {
     val mediaImage = imageProxy.image
     if (mediaImage != null) {
         val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
         
-        // Use a counter to close imageProxy only after both tasks complete
-        var tasksActive = 2
-        var currentObj: com.google.mlkit.vision.objects.DetectedObject? = null
+        var tasksActive = 3
+        var currentObj: DetectedObject? = null
         var currentText: String? = null
+        var currentBarcode: String? = null
 
         fun checkDone() {
             tasksActive--
             if (tasksActive == 0) {
-                onDetected(currentObj, currentText)
+                onDetected(currentObj, currentText, currentBarcode)
                 imageProxy.close()
             }
         }
@@ -481,6 +569,12 @@ private fun processImageProxy(
         textRecognizer.process(image)
             .addOnSuccessListener { visionText ->
                 currentText = visionText.text
+            }
+            .addOnCompleteListener { checkDone() }
+
+        barcodeScanner.process(image)
+            .addOnSuccessListener { barcodes ->
+                currentBarcode = barcodes.firstOrNull()?.rawValue
             }
             .addOnCompleteListener { checkDone() }
     } else {
@@ -517,8 +611,8 @@ fun NothingFoundWindow(
                     )
                 )
                 Text(
-                    "The scan did not yield any results in the local library or the cyberspace.",
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    "The scan did not yield any results in the local library.",
+                    textAlign = TextAlign.Center,
                     color = Color.White,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -531,4 +625,3 @@ fun NothingFoundWindow(
         }
     }
 }
-

@@ -19,6 +19,7 @@ import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.PhotoCamera
+import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -107,6 +108,7 @@ fun AddEditGameScreen(
     
     var currentPlatformId by rememberSaveable { mutableStateOf(platformId ?: "") }
     var title by rememberSaveable { mutableStateOf("") }
+    var barcode by rememberSaveable { mutableStateOf("") }
     var releaseDate by rememberSaveable { mutableStateOf("") }
     var displayDate by rememberSaveable { mutableStateOf("") }
     var genre by rememberSaveable { mutableStateOf("") }
@@ -201,7 +203,8 @@ fun AddEditGameScreen(
                     status = existingGame?.status ?: "Unplayed",
                     purchaseDate = purchaseDate,
                     pricePaid = pricePaid,
-                    notes = existingGame?.notes ?: ""
+                    notes = existingGame?.notes ?: "",
+                    barcode = barcode.takeIf { it.isNotBlank() }
                 )
                 withContext(NonCancellable) {
                     if (isCurrentlyEditing) {
@@ -308,6 +311,7 @@ fun AddEditGameScreen(
                 existingGame = it
                 currentPlatformId = it.platformId
                 title = it.title
+                barcode = it.barcode ?: ""
                 releaseDate = it.releaseDate
                 genre = it.genre
                 developer = it.developer
@@ -423,6 +427,17 @@ fun AddEditGameScreen(
                         value = title,
                         onValueChange = { title = it },
                         label = { Text(stringResource(R.string.label_title)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = getAppCorners(8.dp),
+                        colors = synthwaveTextFieldColors()
+                    )
+
+                    OutlinedTextField(
+                        value = barcode,
+                        onValueChange = { barcode = it },
+                        label = { Text("Barcode / EAN") },
+                        placeholder = { Text("z. B. 4006209000000") },
+                        singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = getAppCorners(8.dp),
                         colors = synthwaveTextFieldColors()

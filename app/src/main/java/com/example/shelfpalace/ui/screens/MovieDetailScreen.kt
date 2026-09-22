@@ -461,6 +461,13 @@ fun MovieInfoTab(
                 )
                 HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
                 InfoRow(
+                    icon = Icons.Rounded.Business, 
+                    label = "Film Studio", 
+                    value = movie.studio.ifEmpty { "None" }, 
+                    color = accentColor
+                )
+                HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
+                InfoRow(
                     icon = Icons.Rounded.Person, 
                     label = stringResource(R.string.label_director), 
                     value = movie.director.ifEmpty { "None" }, 

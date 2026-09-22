@@ -52,6 +52,7 @@ data class Movie(
     val coverUri: String,
     val releaseDate: String,
     val genre: String = "",
+    val studio: String = "",
     val director: String = "",
     val cast: String = "",
     val description: String,

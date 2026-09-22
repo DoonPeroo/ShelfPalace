@@ -38,6 +38,12 @@ data class TmdbMovie(
 }
 
 @JsonClass(generateAdapter = true)
+data class TmdbProductionCompany(
+    val id: Long? = null,
+    val name: String? = null
+)
+
+@JsonClass(generateAdapter = true)
 data class TmdbMovieDetails(
     val id: Long?,
     val title: String? = null,
@@ -48,6 +54,7 @@ data class TmdbMovieDetails(
     @param:Json(name = "release_date") @field:Json(name = "release_date") val releaseDate: String? = null,
     val genres: List<TmdbGenre>? = null,
     val credits: TmdbCredits? = null,
+    @param:Json(name = "production_companies") @field:Json(name = "production_companies") val productionCompanies: List<TmdbProductionCompany>? = null,
     val runtime: Int? = null,
     @param:Json(name = "vote_average") @field:Json(name = "vote_average") val voteAverage: Double? = null
 ) {
@@ -65,6 +72,9 @@ data class TmdbMovieDetails(
 
     val genreNames: String
         get() = genres?.joinToString(", ") { it.name ?: "" } ?: ""
+
+    val studioName: String
+        get() = productionCompanies?.take(2)?.mapNotNull { it.name }?.filter { it.isNotBlank() }?.joinToString(", ") ?: ""
 }
 
 @JsonClass(generateAdapter = true)

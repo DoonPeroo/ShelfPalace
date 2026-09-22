@@ -81,6 +81,7 @@ fun AddEditMovieScreen(
     var releaseDate by rememberSaveable { mutableStateOf("") }
     var displayDate by rememberSaveable { mutableStateOf("") }
     var genre by rememberSaveable { mutableStateOf("") }
+    var studio by rememberSaveable { mutableStateOf("") }
     var director by rememberSaveable { mutableStateOf("") }
     var cast by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
@@ -124,6 +125,7 @@ fun AddEditMovieScreen(
                     barcode = it.barcode ?: ""
                     releaseDate = it.releaseDate
                     genre = it.genre
+                    studio = it.studio
                     director = it.director
                     cast = it.cast
                     description = it.description
@@ -181,6 +183,7 @@ fun AddEditMovieScreen(
                     }
                 }
                 if (details.genreNames.isNotBlank()) genre = details.genreNames
+                if (details.studioName.isNotBlank()) studio = details.studioName
                 if (details.directorName.isNotBlank()) director = details.directorName
                 if (details.castNames.isNotBlank()) cast = details.castNames
                 if (!details.overview.isNullOrBlank()) description = details.overview
@@ -214,6 +217,7 @@ fun AddEditMovieScreen(
                     title = title,
                     releaseDate = releaseDate,
                     genre = genre,
+                    studio = studio,
                     director = director,
                     cast = cast,
                     description = description,
@@ -391,6 +395,16 @@ fun AddEditMovieScreen(
                         onValueChange = { genre = it },
                         label = { Text(stringResource(R.string.label_genre)) },
                         placeholder = { Text("Action, Drama, etc.") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = getAppCorners(8.dp),
+                        colors = synthwaveTextFieldColors()
+                    )
+
+                    OutlinedTextField(
+                        value = studio,
+                        onValueChange = { studio = it },
+                        label = { Text("Film Studio") },
+                        placeholder = { Text("None") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = getAppCorners(8.dp),
                         colors = synthwaveTextFieldColors()

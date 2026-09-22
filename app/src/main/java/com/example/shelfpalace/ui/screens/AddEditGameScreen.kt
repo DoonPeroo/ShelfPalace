@@ -56,6 +56,7 @@ import android.widget.Toast
 import androidx.compose.ui.res.painterResource
 import com.example.shelfpalace.data.local.ShelfPalaceDatabase
 import com.example.shelfpalace.data.remote.IgdbService
+import com.example.shelfpalace.data.remote.MetacriticService
 import com.example.shelfpalace.ui.theme.DarkBackground
 import com.example.shelfpalace.ui.theme.ShelfPalaceTheme
 import com.example.shelfpalace.util.StorageUtil.cropBitmap
@@ -67,6 +68,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Date
+import java.util.Locale
 import java.util.UUID
 
 private val GENRES = listOf(
@@ -124,7 +126,10 @@ fun AddEditGameScreen(
     var purchaseDate by rememberSaveable { mutableStateOf("") }
     var pricePaid by rememberSaveable { mutableStateOf("") }
     var userRating by rememberSaveable { mutableStateOf<Double?>(null) }
+    var igdbCriticRating by rememberSaveable { mutableStateOf<Double?>(null) }
     var criticRating by rememberSaveable { mutableStateOf<Double?>(null) }
+    var metacriticUserRating by rememberSaveable { mutableStateOf<Double?>(null) }
+    var metacriticCriticRating by rememberSaveable { mutableStateOf<Double?>(null) }
     var currentIgdbId by rememberSaveable { mutableStateOf<Long?>(null) }
     var dateAdded by rememberSaveable { mutableLongStateOf(System.currentTimeMillis()) }
     var tempImageUriString by rememberSaveable { mutableStateOf<String?>(null) }
@@ -159,6 +164,7 @@ fun AddEditGameScreen(
                         val match = matches.firstOrNull()
                         if (match != null) {
                             if (userRating == null) userRating = match.rating
+                            if (igdbCriticRating == null) igdbCriticRating = match.aggregatedRating
                             if (criticRating == null) criticRating = match.aggregatedRating
                             if (currentIgdbId == null) currentIgdbId = match.id
                             if (developer.isBlank()) developer = match.involvedCompanies?.getOrNull(0)?.company?.name ?: ""
@@ -197,7 +203,10 @@ fun AddEditGameScreen(
                     condition = condition,
                     gameEdition = gameEdition,
                     userRating = userRating,
+                    igdbCriticRating = igdbCriticRating,
                     criticRating = criticRating,
+                    metacriticUserRating = metacriticUserRating,
+                    metacriticCriticRating = metacriticCriticRating,
                     igdbId = currentIgdbId,
                     dateAdded = originalDateAdded,
                     status = existingGame?.status ?: "Unplayed",
@@ -234,7 +243,8 @@ fun AddEditGameScreen(
                 developer = it.involvedCompanies?.getOrNull(0)?.company?.name ?: ""
                 publisher = it.involvedCompanies?.getOrNull(1)?.company?.name ?: ""
                 userRating = it.rating
-                criticRating = it.aggregatedRating
+                igdbCriticRating = it.aggregatedRating
+                if (criticRating == null) criticRating = it.aggregatedRating
                 
                 it.firstReleaseDate?.let { timestamp ->
                     val date = java.util.Date(timestamp * 1000)
@@ -255,18 +265,29 @@ fun AddEditGameScreen(
     }
 
     LaunchedEffect(title, currentPlatformId) {
-        if (title.length >= 3 && currentIgdbId == null) {
+        if (title.length >= 3) {
             delay(800L)
-            if (title.length >= 3 && currentIgdbId == null) {
+            if (title.length >= 3) {
                 try {
-                    val matches = withContext(Dispatchers.IO) {
-                        IgdbService.search(title, currentPlatformId)
+                    if (currentIgdbId == null) {
+                        val matches = withContext(Dispatchers.IO) {
+                            IgdbService.search(title, currentPlatformId)
+                        }
+                        val match = matches.firstOrNull()
+                        if (match != null && currentIgdbId == null) {
+                            if (userRating == null) userRating = match.rating
+                            if (igdbCriticRating == null) igdbCriticRating = match.aggregatedRating
+                            if (criticRating == null) criticRating = match.aggregatedRating
+                            currentIgdbId = match.id
+                        }
                     }
-                    val match = matches.firstOrNull()
-                    if (match != null && currentIgdbId == null) {
-                        if (userRating == null) userRating = match.rating
-                        if (criticRating == null) criticRating = match.aggregatedRating
-                        currentIgdbId = match.id
+
+                    if (metacriticUserRating == null || metacriticCriticRating == null) {
+                        val meta = withContext(Dispatchers.IO) {
+                            MetacriticService.fetchRatings(title, currentPlatformId)
+                        }
+                        if (metacriticUserRating == null) metacriticUserRating = meta.userScore
+                        if (metacriticCriticRating == null) metacriticCriticRating = meta.criticScore
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -324,7 +345,10 @@ fun AddEditGameScreen(
                 purchaseDate = it.purchaseDate
                 pricePaid = it.pricePaid
                 userRating = it.userRating
+                igdbCriticRating = it.igdbCriticRating
                 criticRating = it.criticRating
+                metacriticUserRating = it.metacriticUserRating
+                metacriticCriticRating = it.metacriticCriticRating
                 currentIgdbId = it.igdbId
                 dateAdded = it.dateAdded
                 
@@ -530,6 +554,37 @@ fun AddEditGameScreen(
                         singleLine = true,
                         colors = synthwaveTextFieldColors()
                     )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = (igdbCriticRating ?: criticRating)?.let { String.format(Locale.US, "%.0f", if (it <= 10.0) it * 10.0 else it) } ?: "",
+                            onValueChange = { 
+                                val parsed = it.replace(',', '.').toDoubleOrNull()
+                                igdbCriticRating = parsed
+                                criticRating = parsed
+                            },
+                            label = { Text("Critic Rating") },
+                            placeholder = { Text("e.g. 88") },
+                            modifier = Modifier.weight(1f),
+                            shape = getAppCorners(8.dp),
+                            singleLine = true,
+                            colors = synthwaveTextFieldColors()
+                        )
+
+                        OutlinedTextField(
+                            value = userRating?.let { String.format(Locale.US, "%.1f", if (it > 10.0) it / 10.0 else it).removeSuffix(".0") } ?: "",
+                            onValueChange = { userRating = it.replace(',', '.').toDoubleOrNull() },
+                            label = { Text("User Rating") },
+                            placeholder = { Text("e.g. 8.5") },
+                            modifier = Modifier.weight(1f),
+                            shape = getAppCorners(8.dp),
+                            singleLine = true,
+                            colors = synthwaveTextFieldColors()
+                        )
+                    }
 
                     OutlinedTextField(
                         value = description,

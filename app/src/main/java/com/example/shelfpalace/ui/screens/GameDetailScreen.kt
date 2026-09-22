@@ -34,18 +34,21 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
@@ -72,6 +75,32 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shelfpalace.data.remote.IgdbVideo
+import com.example.shelfpalace.data.remote.MetacriticService
+import java.util.Locale
+
+fun formatRatingDisplay(score: Double?): String {
+    if (score == null || score <= 0 || score > 100) return "-"
+    val valToFormat = if (score > 10.0) score / 10.0 else score
+    val formatted = String.format(Locale.US, "%.1f", valToFormat)
+    return if (formatted.endsWith(".0")) formatted.dropLast(2) else formatted
+}
+
+fun formatMetacriticCriticDisplay(score: Double?): String {
+    if (score == null || score <= 0) return "-"
+    return if (score > 10.0) {
+        score.toInt().toString()
+    } else {
+        val formatted = String.format(Locale.US, "%.1f", score)
+        if (formatted.endsWith(".0")) formatted.dropLast(2) else formatted
+    }
+}
+
+fun formatMetacriticUserDisplay(score: Double?): String {
+    if (score == null || score <= 0) return "-"
+    val valToFormat = if (score > 10.0) score / 10.0 else score
+    val formatted = String.format(Locale.US, "%.1f", valToFormat)
+    return if (formatted.endsWith(".0")) formatted.dropLast(2) else formatted
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,32 +124,74 @@ fun GameDetailScreen(
     var videos by remember { mutableStateOf<List<IgdbVideo>>(emptyList()) }
     var isMediaLoading by remember { mutableStateOf(value = false) }
     
+    var hasFetchedRatings by rememberSaveable(gameId) { mutableStateOf(false) }
+
     LaunchedEffect(game?.id) {
         val currentGame = game ?: return@LaunchedEffect
-        
-        // 1. Fetch Ratings if missing
-        if (currentGame.userRating == null || currentGame.criticRating == null) {
+
+        if (!hasFetchedRatings) {
+            hasFetchedRatings = true
+
             try {
-                val matches = withContext(Dispatchers.IO) {
-                    IgdbService.search(currentGame.title, currentGame.platformId)
+                var updated = false
+                var newUserRating = currentGame.userRating?.takeIf { it <= 100 }
+                var newIgdbCriticRating = currentGame.igdbCriticRating?.takeIf { it <= 100 }
+                var newCriticRating = currentGame.criticRating?.takeIf { it <= 100 }
+                var newMetacriticUserRating = currentGame.metacriticUserRating?.takeIf { it <= 100 }
+                var newMetacriticCriticRating = currentGame.metacriticCriticRating?.takeIf { it <= 100 }
+                var newIgdbId = currentGame.igdbId
+
+                if (newUserRating != currentGame.userRating ||
+                    newIgdbCriticRating != currentGame.igdbCriticRating ||
+                    newCriticRating != currentGame.criticRating ||
+                    newMetacriticUserRating != currentGame.metacriticUserRating ||
+                    newMetacriticCriticRating != currentGame.metacriticCriticRating) {
+                    updated = true
                 }
-                val match = matches.firstOrNull()
-                if (match != null) {
-                    val newUserRating = currentGame.userRating ?: match.rating ?: match.totalRating
-                    val newCriticRating = currentGame.criticRating ?: match.aggregatedRating ?: match.totalRating
-                    val newIgdbId = currentGame.igdbId ?: match.id
-                    
-                    if (newUserRating != currentGame.userRating || 
-                        newCriticRating != currentGame.criticRating || 
-                        newIgdbId != currentGame.igdbId) {
-                        
-                        val updatedGame = currentGame.copy(
-                            userRating = newUserRating,
-                            criticRating = newCriticRating,
-                            igdbId = newIgdbId
-                        )
-                        repository.updateGame(updatedGame)
+
+                // Fetch IGDB ratings if missing
+                if (newUserRating == null || newIgdbCriticRating == null || newIgdbId == null) {
+                    val matches = withContext(Dispatchers.IO) {
+                        IgdbService.search(currentGame.title, currentGame.platformId)
                     }
+                    val match = matches.firstOrNull()
+                    if (match != null) {
+                        if (newUserRating == null) newUserRating = match.rating
+                        if (newIgdbCriticRating == null) newIgdbCriticRating = match.aggregatedRating
+                        if (newIgdbId == null) newIgdbId = match.id
+                        if (newCriticRating == null) newCriticRating = match.aggregatedRating
+                        updated = true
+                    }
+                }
+
+                // Fetch Metacritic ratings if missing
+                if (newMetacriticUserRating == null || newMetacriticCriticRating == null) {
+                    val metacriticResult = withContext(Dispatchers.IO) {
+                        MetacriticService.fetchRatings(currentGame.title, currentGame.platformId)
+                    }
+                    if (metacriticResult.criticScore != null || metacriticResult.userScore != null) {
+                        if (newMetacriticCriticRating == null && metacriticResult.criticScore != null) {
+                            newMetacriticCriticRating = metacriticResult.criticScore
+                            if (newCriticRating == null) newCriticRating = metacriticResult.criticScore
+                            updated = true
+                        }
+                        if (newMetacriticUserRating == null && metacriticResult.userScore != null) {
+                            newMetacriticUserRating = metacriticResult.userScore
+                            updated = true
+                        }
+                    }
+                }
+
+                if (updated) {
+                    val updatedGame = currentGame.copy(
+                        userRating = newUserRating,
+                        igdbCriticRating = newIgdbCriticRating,
+                        criticRating = newCriticRating,
+                        metacriticUserRating = newMetacriticUserRating,
+                        metacriticCriticRating = newMetacriticCriticRating,
+                        igdbId = newIgdbId
+                    )
+                    repository.updateGame(updatedGame)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -437,7 +508,7 @@ fun GameInfoTab(
     onPlatformClick: (String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // Info Card
+        // Info Card mit integriertem 2-Spalten Wertungsraster
         NeonCard(
             modifier = Modifier.fillMaxWidth(),
             color = accentColor,
@@ -459,23 +530,177 @@ fun GameInfoTab(
                 HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
                 InfoRow(icon = Icons.Rounded.Category, label = "Genre", value = game.genre.ifEmpty { "None" }, color = accentColor)
                 HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
-                val userFormatted = game.userRating?.takeIf { it > 0 }?.let { "User: %.1f / 100".format(it) }
-                val criticFormatted = game.criticRating?.takeIf { it > 0 }?.let { "Critic: %.1f / 100".format(it) }
-                val ratingsDisplay = when {
-                    userFormatted != null && criticFormatted != null -> "$userFormatted | $criticFormatted"
-                    userFormatted != null -> userFormatted
-                    criticFormatted != null -> criticFormatted
-                    else -> "(None)"
-                }
-
                 InfoRow(icon = Icons.Rounded.Event, label = "Released", value = DateUtils.formatDisplayDate(game.releaseDate).ifEmpty { "None" }, color = accentColor)
-                HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
-                InfoRow(
-                    icon = Icons.Rounded.Star, 
-                    label = "Ratings", 
-                    value = ratingsDisplay, 
-                    color = accentColor
-                )
+
+                // IGDB & Metacritic Wertungen im Info-Raster (nebeneinander & kompakter)
+                val igdbUserRating = game.userRating?.takeIf { it > 0 }
+                val igdbCriticRating = game.igdbCriticRating?.takeIf { it > 0 } ?: game.criticRating?.takeIf { it > 0 }
+                val metacriticCriticRating = game.metacriticCriticRating?.takeIf { it > 0 }
+                val metacriticUserRating = game.metacriticUserRating?.takeIf { it > 0 }
+
+                val hasIgdb = igdbUserRating != null || igdbCriticRating != null
+                val hasMetacritic = metacriticCriticRating != null || metacriticUserRating != null
+
+                if (hasIgdb || hasMetacritic) {
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // IGDB Spalte
+                        if (hasIgdb) {
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(horizontal = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Star,
+                                        contentDescription = null,
+                                        tint = Color(0xFF9146FF),
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Text(
+                                        text = "IGDB",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF9146FF),
+                                            letterSpacing = 0.5.sp,
+                                            fontSize = 11.sp
+                                        )
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceEvenly,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            text = formatRatingDisplay(igdbCriticRating),
+                                            style = MaterialTheme.typography.titleMedium.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White
+                                            )
+                                        )
+                                        Text(
+                                            text = "Critic",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = Color.White.copy(alpha = 0.5f),
+                                                fontSize = 10.sp
+                                            )
+                                        )
+                                    }
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            text = formatRatingDisplay(igdbUserRating),
+                                            style = MaterialTheme.typography.titleMedium.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White
+                                            )
+                                        )
+                                        Text(
+                                            text = "User",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = Color.White.copy(alpha = 0.5f),
+                                                fontSize = 10.sp
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Trennlinie wenn beide vorhanden
+                        if (hasIgdb && hasMetacritic) {
+                            Box(
+                                modifier = Modifier
+                                    .width(1.dp)
+                                    .height(36.dp)
+                                    .background(Color.White.copy(alpha = 0.15f))
+                            )
+                        }
+
+                        // Metacritic Spalte
+                        if (hasMetacritic) {
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(horizontal = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Star,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFFBD3F),
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Text(
+                                        text = "METACRITIC",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFFFFBD3F),
+                                            letterSpacing = 0.5.sp,
+                                            fontSize = 11.sp
+                                        )
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceEvenly,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            text = formatMetacriticCriticDisplay(metacriticCriticRating),
+                                            style = MaterialTheme.typography.titleMedium.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White
+                                            )
+                                        )
+                                        Text(
+                                            text = "Critic",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = Color.White.copy(alpha = 0.5f),
+                                                fontSize = 10.sp
+                                            )
+                                        )
+                                    }
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            text = formatMetacriticUserDisplay(metacriticUserRating),
+                                            style = MaterialTheme.typography.titleMedium.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White
+                                            )
+                                        )
+                                        Text(
+                                            text = "User",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = Color.White.copy(alpha = 0.5f),
+                                                fontSize = 10.sp
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 

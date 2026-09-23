@@ -200,25 +200,6 @@ ShelfPalace uses five primary navigation areas:
 | 📊 **Statistics** | View collection statistics and expenses |
 | ⚙️ **Settings** | Customize and manage the app |
 
----
-
-## 🖼️ Screenshots
-
-### Library
-
-<p align="center">
-  <img src="screenshots/[library-games.jpg] https://raw.githubusercontent.com/DoonPeroo/ShelfPalace/refs/heads/master/29712.jpg width="280">
-  <img src="screenshots/library-music.jpg" width="280">
-</p>
-
-### Details & Favorites
-
-<p align="center">
-  <img src="screenshots/game-details.jpg" width="280">
-  <img src="screenshots/movie-details.jpg" width="280">
-  <img src="screenshots/favorites.jpg" width="280">
-</p>
-
 ### Statistics & Settings
 
 <p align="center">

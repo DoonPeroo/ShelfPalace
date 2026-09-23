@@ -1,246 +1,296 @@
-# 🎮 ShelfPalace
+# 👑 ShelfPalace
 
-**Your collection. Your kingdom.**
+> **Your collection. Your kingdom.**
 
-ShelfPalace is a mobile collection management app designed for collectors who want to keep their **games, movies, and music** organized in one place.
+ShelfPalace is a mobile collection manager for **games, movies and music**.  
+Keep your physical media collection organized in one place, track favorites and personal details, and get statistics about your entire collection.
 
-Whether you're tracking your physical game collection, keeping an eye on different console libraries, saving favorites, or browsing statistics about your collection, ShelfPalace provides a clean and visual way to manage everything.
+The app combines a retro-inspired **Synthwave interface** with a visual, cover-focused library.
+
+> **Current version:** Beta 0.90
 
 ---
 
 ## ✨ Features
 
-### 🎮 Game Collection
+### 🎮 Games
 
-Build and manage your personal video game library.
+Manage your video game collection across multiple platforms.
 
-ShelfPalace supports collections across multiple platforms and manufacturers, including:
+- Organize games by console and manufacturer
+- Cover artwork
+- Game details
+- Favorites
+- Personal collection information
+- Screenshots and media
+- Search and filtering
+- Track purchase information
+- Collection statistics
 
-- Nintendo
-- PlayStation
+Supported collections can include platforms such as:
+
 - Nintendo Switch
 - Nintendo Switch 2
-- Nintendo DS / 3DS
+- Nintendo 3DS
+- Nintendo DS
 - Nintendo Wii U
-- PlayStation 1–5
-- PSP
-- PS Vita
-- and more
-
-Games are displayed with cover artwork and platform badges for quick identification.
+- PlayStation 4
+- PlayStation 5
+- PlayStation Portable
+- PlayStation Vita
 
 ---
 
-### 🌐 IGDB Import
+### 🎬 Movies
 
-Instead of entering every game manually, ShelfPalace can import game information from **IGDB**.
+Keep your physical movie collection alongside your games.
 
-You can also create entries manually and store information such as:
+Movie entries can contain:
 
-- Title
-- Release date
-- Genre
-- Developer
-- Publisher
-- Game condition
-- Edition
-- Purchase date
+- Cover artwork
+- Movie information
+- Description
+- Ratings
+- Critic and audience ratings
+- Media
+- Personal details
+- Favorites
+- Physical format
+
+Formats such as **4K Blu-ray** can be tracked separately.
+
+---
+
+### 🎵 Music
+
+ShelfPalace also provides a dedicated music collection.
+
+Track information such as:
+
+- Album artwork
+- Album title
+- Physical format
 - Collection status
+- Date added
+- Personal notes
+- Favorites
 
-This makes ShelfPalace suitable not only for tracking what you own, but also for documenting the condition and edition of physical games.
-
----
-
-### 📝 Detailed Game Pages
-
-Each game has its own detailed overview.
-
-Available information can include:
-
-- Playing status
-- Game condition
-- Edition
-- Date added to the library
-- Purchase date
-- General game information
-- Screenshots
-- Videos and other media
-
-Games can also be marked as favorites, edited, or removed directly from their detail page.
+Physical formats such as **Vinyl** can be organized independently.
 
 ---
 
-### ❤️ Favorites
+## 🏠 Library
 
-Keep your favorite items in a dedicated collection.
+The main library provides quick access to all three collection types:
 
-The Favorites section provides a visual grid with cover artwork and platform indicators, making your most important games easy to find.
+**Games · Movies · Music**
 
-Sorting and search controls help when the collection gets larger.
+Recently added or selected items are displayed directly on the home screen with their cover artwork and format/platform badges.
+
+A global search makes it possible to quickly find items across the library.
+
+New entries can be added directly from the central **+** button:
+
+- New Game
+- New Movie
+- New Music
 
 ---
 
-### 🎬 Movies & 🎵 Music
+## ❤️ Favorites
 
-ShelfPalace isn't limited to video games.
+Games, movies and music can be marked as favorites.
 
-The application also provides dedicated library categories for:
+The dedicated Favorites view provides a visual grid of your favorite collection items, including platform and format indicators.
+
+---
+
+## 📊 Collection Statistics
+
+ShelfPalace provides statistics about your collection.
+
+Available statistics include:
+
+### Games by Manufacturer
+
+See how your game collection is distributed between manufacturers such as Nintendo and Sony.
+
+### Games by Console
+
+View the number and percentage of games owned for each platform.
+
+### Movies by Format
+
+Track the distribution of physical movie formats.
+
+### Music by Format
+
+See how your music collection is distributed across formats such as Vinyl.
+
+### Collection Totals
+
+Get a quick overview of the total number of:
 
 - 🎮 Games
 - 🎬 Movies
 - 🎵 Music
-- ➕ Additional categories
 
-Recently added items are displayed directly on the main library screen.
+### 💰 Expenses
 
----
+ShelfPalace can also track purchase prices and calculate the total amount spent on your collection.
 
-### 🔍 Search & Filters
-
-Quickly find items in your collection using the built-in search and filtering system.
-
-Game libraries can be filtered by manufacturer and individual platforms, allowing you to browse specific parts of your collection such as:
-
-**Sony → PlayStation 4**
-
-or
-
-**Nintendo → Nintendo Switch**
-
-without having to scroll through your entire library.
+Expenses can be broken down by platform or media format.
 
 ---
 
-### 📊 Collection Statistics
+## 🔎 Search & Filters
 
-Get an overview of your collection with visual statistics.
+ShelfPalace includes library search and configurable filters to make larger collections easier to navigate.
 
-ShelfPalace can display:
+Filters can be configured independently for:
 
-- Games by manufacturer
-- Games by console
-- Total number of games
-- Total number of movies
-- Total number of music items
-
-Color-coded charts make it easy to see which platforms and manufacturers dominate your collection.
+- Games
+- Movies
+- Music
 
 ---
 
-### 🖼️ Media Gallery
+## 🎨 Customization
 
-Game pages can include additional media such as:
+The appearance of ShelfPalace can be customized from the settings.
 
-- Screenshots
-- Videos
+### Color Styles
 
-This turns individual entries into more than simple database records and provides a visual overview of each game.
+- **Synthwave**
+- **Cyber Green**
 
----
+### Corner Styles
 
-### 💾 Backup & Restore
-
-Your collection can be backed up and restored from the Settings section.
-
-Available data management options include:
-
-- **Backup**
-- **Restore**
-- **Delete All Data**
-
-This makes it easier to preserve or migrate your collection.
-
----
-
-### 🎨 Customization
-
-ShelfPalace includes appearance options such as selectable corner styles:
-
-- Rounded
+- Default
+- Round
 - Square
 
-Individual library categories can also be enabled or disabled, allowing you to customize the application around the type of collection you maintain.
+The Synthwave theme combines a dark interface with neon colors and a retro-futuristic aesthetic.
 
 ---
 
-## 📱 Screenshots
+## 💾 Backup & Restore
+
+Collection data can be backed up and restored from the settings.
+
+Available data-management options:
+
+- ☁️ Backup
+- ☁️ Restore
+- 🗑️ Delete all data
+
+> ⚠️ **Delete all data** permanently removes the locally stored collection and should be used with care.
+
+---
+
+## 📱 Navigation
+
+ShelfPalace uses five primary navigation areas:
+
+| Section | Description |
+|---|---|
+| 📚 **Library** | Browse games, movies and music |
+| ❤️ **Favorites** | Access favorite collection items |
+| ➕ **Add** | Add a new game, movie or music entry |
+| 📊 **Statistics** | View collection statistics and expenses |
+| ⚙️ **Settings** | Customize and manage the app |
+
+---
+
+## 🖼️ Screenshots
 
 ### Library
 
 <p align="center">
-  <img src="screenshots/library.jpg" width="300" alt="ShelfPalace Library">
+  <img src="screenshots/library-games.jpg" width="280">
+  <img src="screenshots/library-music.jpg" width="280">
 </p>
 
-### Add a Game
+### Details & Favorites
 
 <p align="center">
-  <img src="screenshots/add-game.jpg" width="300" alt="Add a new game">
+  <img src="screenshots/game-details.jpg" width="280">
+  <img src="screenshots/movie-details.jpg" width="280">
+  <img src="screenshots/favorites.jpg" width="280">
 </p>
 
-### Game Details
+### Statistics & Settings
 
 <p align="center">
-  <img src="screenshots/game-details.jpg" width="300" alt="Game details">
-</p>
-
-### Media
-
-<p align="center">
-  <img src="screenshots/media.jpg" width="300" alt="Game media">
-</p>
-
-### Favorites
-
-<p align="center">
-  <img src="screenshots/favorites.jpg" width="300" alt="Favorites">
-</p>
-
-### Statistics
-
-<p align="center">
-  <img src="screenshots/statistics.jpg" width="300" alt="Collection statistics">
-</p>
-
-### Settings
-
-<p align="center">
-  <img src="screenshots/settings.jpg" width="300" alt="Settings">
+  <img src="screenshots/statistics.jpg" width="280">
+  <img src="screenshots/settings.jpg" width="280">
 </p>
 
 ---
 
-## 🧭 Navigation
+## 🚧 Project Status
 
-ShelfPalace uses a simple bottom navigation bar with quick access to the most important areas:
+ShelfPalace is currently in **Beta**.
 
-| Section | Description |
-|---|---|
-| **Library** | Browse your complete collection |
-| **Favorites** | Access your favorite items |
-| **+** | Add a new item |
-| **Statistics** | View collection statistics |
-| **Settings** | Configure ShelfPalace and manage your data |
+Current screenshots show:
+
+**Version Beta 0.90**
+
+Features, layouts and data structures may still change during development.
 
 ---
 
-## 🎯 Project Goal
+## 🗺️ Possible Roadmap
 
-ShelfPalace was created with collectors in mind.
+Some ideas for future development:
 
-The goal is to provide a central place where physical and digital media collections can be documented without reducing them to a simple list.
-
-Platform information, editions, condition, purchase information, artwork, media, favorites, filters, and statistics help turn your collection into a personal digital archive.
-
-> **Your collection. Your kingdom.**
+- [ ] Expanded game metadata
+- [ ] Expanded movie metadata
+- [ ] Expanded music metadata
+- [ ] More collection statistics
+- [ ] Additional physical media formats
+- [ ] Advanced sorting and filtering
+- [ ] Improved backup and restore
+- [ ] Additional themes
+- [ ] Collection import/export
+- [ ] Barcode scanning
+- [ ] Collection value tracking
+- [ ] Wishlist support
 
 ---
 
-## 🚧 Development Status
+## 🔒 Privacy
 
-ShelfPalace is currently under development.
+ShelfPalace is designed around your personal collection.
 
-Features, layouts, supported platforms, metadata providers, and database structures may change as development continues.
+If the application uses external metadata services, their respective privacy policies and terms may apply.
 
+> More detailed privacy information should be added here before a public release.
+
+---
+
+## 🛠️ Development
+
+ShelfPalace is currently under active development.
+
+Technical setup, build instructions and project requirements can be documented here once the repository structure and development stack are finalized.
+
+---
+
+## 🤝 Contributing
+
+ShelfPalace is currently a beta project.
+
+Bug reports, feature suggestions and feedback are welcome through GitHub Issues.
+
+When reporting a bug, please include:
+
+- App version
+- Device / operating system
+- Steps to reproduce
+- Expected behavior
+- Actual behavior
+- Screenshot, if applicable
 ---
 
 ## 🗺️ Possible Future Features

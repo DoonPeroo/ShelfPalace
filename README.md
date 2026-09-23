@@ -222,7 +222,8 @@ ShelfPalace uses five primary navigation areas:
 ### Statistics & Settings
 
 <p align="center">
-  <img src="screenshots/statistics.jpg" width="280">
+  <img src="screenshots/<img width="690" height="1536" alt="image" src="https://github.com/user-attachments/assets/dd408d83-3208-424f-b5a4-d97783e93831" />
+" width="280">
   <img src="screenshots/settings.jpg" width="280">
 </p>
 

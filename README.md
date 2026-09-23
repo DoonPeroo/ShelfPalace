@@ -207,7 +207,7 @@ ShelfPalace uses five primary navigation areas:
 ### Library
 
 <p align="center">
-  <img src="screenshots/[library-games.jpg](https://github.com/DoonPeroo/ShelfPalace/blob/master/29712.jpg?raw=true)" width="280">
+  <img src="screenshots/[library-games.jpg] https://github.com/DoonPeroo/ShelfPalace/blob/master/29712.jpg?raw=true" width="280">
   <img src="screenshots/library-music.jpg" width="280">
 </p>
 

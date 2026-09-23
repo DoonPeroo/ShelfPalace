@@ -222,8 +222,7 @@ ShelfPalace uses five primary navigation areas:
 ### Statistics & Settings
 
 <p align="center">
-  <img src="screenshots/<img width="690" height="1536" alt="image" src="https://github.com/user-attachments/assets/dd408d83-3208-424f-b5a4-d97783e93831" />
-" width="280">
+  <img src="screenshots/statistics.jpg" width="280">
   <img src="screenshots/settings.jpg" width="280">
 </p>
 
@@ -276,22 +275,6 @@ ShelfPalace is currently under active development.
 
 Technical setup, build instructions and project requirements can be documented here once the repository structure and development stack are finalized.
 
----
-
-## 🤝 Contributing
-
-ShelfPalace is currently a beta project.
-
-Bug reports, feature suggestions and feedback are welcome through GitHub Issues.
-
-When reporting a bug, please include:
-
-- App version
-- Device / operating system
-- Steps to reproduce
-- Expected behavior
-- Actual behavior
-- Screenshot, if applicable
 ---
 
 ## 🗺️ Possible Future Features

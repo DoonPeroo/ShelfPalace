@@ -222,7 +222,7 @@ ShelfPalace uses five primary navigation areas:
 ### Statistics & Settings
 
 <p align="center">
-  <img src="screenshots/statistics.jpg" width="280">
+  <img https://github.com/DoonPeroo/ShelfPalace/blob/master/29720.jpg?raw=true width="280">
   <img src="screenshots/settings.jpg" width="280">
 </p>
 

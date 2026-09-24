@@ -27,6 +27,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.shelfpalace.R
+import com.example.shelfpalace.data.Game
+import com.example.shelfpalace.data.Movie
+import com.example.shelfpalace.data.Music
 import com.example.shelfpalace.data.GameRepository
 import com.example.shelfpalace.data.MovieRepository
 import com.example.shelfpalace.data.MusicRepository
@@ -77,11 +80,19 @@ fun FavoritesScreen(
         }
         val filtered = if (searchQuery.isBlank()) base else base.filter { it.title.matchesSearchQuery(searchQuery) }
         when (currentSortOption) {
-            SortOption.NAME -> filtered.sortedBy { it.title }
+            SortOption.NAME -> filtered.sortedBy { it.title.lowercase() }
             SortOption.RELEASE_DATE -> filtered.sortedByDescending { it.releaseDate }
-            SortOption.PLATFORM -> filtered.sortedBy { game -> 
-                StaticData.platforms.find { it.id == game.platformId }?.name ?: ""
-            }
+            SortOption.PLATFORM -> filtered.sortedWith(
+                compareBy<Game> { game ->
+                    val idx = StaticData.platforms.indexOfFirst { it.id == game.platformId }
+                    if (idx >= 0) idx else Int.MAX_VALUE
+                }.thenBy { it.title.lowercase() }
+            )
+            SortOption.PLATFORM_NAME -> filtered.sortedWith(
+                compareBy<Game> { game ->
+                    StaticData.platforms.find { it.id == game.platformId }?.name ?: ""
+                }.thenBy { it.title.lowercase() }
+            )
         }
     }
 
@@ -91,11 +102,19 @@ fun FavoritesScreen(
         val filtered = if (searchQuery.isBlank()) base else base.filter { it.title.matchesSearchQuery(searchQuery) }
         
         when (currentSortOption) {
-            SortOption.NAME -> filtered.sortedBy { it.title }
+            SortOption.NAME -> filtered.sortedBy { it.title.lowercase() }
             SortOption.RELEASE_DATE -> filtered.sortedByDescending { it.releaseDate }
-            SortOption.PLATFORM -> filtered.sortedBy { movie -> 
-                StaticData.movieFormats.find { it.id == movie.formatId }?.name ?: ""
-            }
+            SortOption.PLATFORM -> filtered.sortedWith(
+                compareBy<Movie> { movie ->
+                    val idx = StaticData.movieFormats.indexOfFirst { it.id == movie.formatId }
+                    if (idx >= 0) idx else Int.MAX_VALUE
+                }.thenBy { it.title.lowercase() }
+            )
+            SortOption.PLATFORM_NAME -> filtered.sortedWith(
+                compareBy<Movie> { movie ->
+                    StaticData.movieFormats.find { it.id == movie.formatId }?.name ?: ""
+                }.thenBy { it.title.lowercase() }
+            )
         }
     }
 
@@ -105,11 +124,19 @@ fun FavoritesScreen(
         val filtered = if (searchQuery.isBlank()) base else base.filter { it.title.matchesSearchQuery(searchQuery) || it.artist.matchesSearchQuery(searchQuery) }
         
         when (currentSortOption) {
-            SortOption.NAME -> filtered.sortedBy { it.title }
+            SortOption.NAME -> filtered.sortedBy { it.title.lowercase() }
             SortOption.RELEASE_DATE -> filtered.sortedByDescending { it.releaseDate }
-            SortOption.PLATFORM -> filtered.sortedBy { music -> 
-                StaticData.musicFormats.find { it.id == music.formatId }?.name ?: ""
-            }
+            SortOption.PLATFORM -> filtered.sortedWith(
+                compareBy<Music> { music ->
+                    val idx = StaticData.musicFormats.indexOfFirst { it.id == music.formatId }
+                    if (idx >= 0) idx else Int.MAX_VALUE
+                }.thenBy { it.title.lowercase() }
+            )
+            SortOption.PLATFORM_NAME -> filtered.sortedWith(
+                compareBy<Music> { music ->
+                    StaticData.musicFormats.find { it.id == music.formatId }?.name ?: ""
+                }.thenBy { it.title.lowercase() }
+            )
         }
     }
 

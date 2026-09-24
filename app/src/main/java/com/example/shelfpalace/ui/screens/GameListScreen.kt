@@ -82,11 +82,19 @@ fun GameListScreen(
         else validList.filter { it.title.matchesSearchQuery(searchQuery) }
         
         when (currentSortOption) {
-            SortOption.NAME -> filtered.sortedBy { it.title }
+            SortOption.NAME -> filtered.sortedBy { it.title.lowercase() }
             SortOption.RELEASE_DATE -> filtered.sortedByDescending { it.releaseDate }
-            SortOption.PLATFORM -> filtered.sortedBy { game -> 
-                StaticData.platforms.find { it.id == game.platformId }?.name ?: ""
-            }
+            SortOption.PLATFORM -> filtered.sortedWith(
+                compareBy<Game> { game ->
+                    val idx = StaticData.platforms.indexOfFirst { it.id == game.platformId }
+                    if (idx >= 0) idx else Int.MAX_VALUE
+                }.thenBy { it.title.lowercase() }
+            )
+            SortOption.PLATFORM_NAME -> filtered.sortedWith(
+                compareBy<Game> { game ->
+                    StaticData.platforms.find { it.id == game.platformId }?.name ?: ""
+                }.thenBy { it.title.lowercase() }
+            )
         }
     }
 
@@ -194,7 +202,8 @@ fun GameListScreen(
                         SortIconButton(
                             currentSortOption = currentSortOption,
                             onSortOptionSelected = { scope.launch { settingsRepository.setSortOption(it) } },
-                            color = accentColor
+                            color = accentColor,
+                            showConsoleSort = true
                         )
                         NeonIconButton(
                             iconPainter = painterResource(id = R.drawable.search),

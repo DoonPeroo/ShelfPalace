@@ -106,7 +106,8 @@ data class MusicFormat(
 enum class SortOption {
     NAME,
     RELEASE_DATE,
-    PLATFORM
+    PLATFORM,
+    PLATFORM_NAME
 }
 
 enum class CornerStyle {

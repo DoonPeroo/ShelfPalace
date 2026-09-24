@@ -367,6 +367,31 @@ fun SortIconButton(
                         expanded = false
                     }
                 )
+                DropdownMenuItem(
+                    text = { 
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(
+                                        if (currentSortOption == SortOption.PLATFORM_NAME) color else Color.Transparent,
+                                        getAppCorners(2.dp)
+                                    )
+                                    .border(1.dp, if (currentSortOption == SortOption.PLATFORM_NAME) color else Color.White.copy(alpha = 0.5f), getAppCorners(2.dp))
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                "SORT BY CONSOLE (NAME)", 
+                                color = if (currentSortOption == SortOption.PLATFORM_NAME) color else Color.White, 
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                            )
+                        }
+                    },
+                    onClick = {
+                        onSortOptionSelected(SortOption.PLATFORM_NAME)
+                        expanded = false
+                    }
+                )
             }
         }
     }

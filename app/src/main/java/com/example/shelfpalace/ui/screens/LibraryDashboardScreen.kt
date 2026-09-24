@@ -54,6 +54,25 @@ import com.example.shelfpalace.ui.theme.SynthwaveLavender
 import com.example.shelfpalace.ui.theme.SynthwavePink
 import com.example.shelfpalace.util.PlatformUtils
 
+private fun parseSortMode(filterOption: String): String {
+    return if (filterOption.contains("Recently Added")) "Recently Added" else "Default"
+}
+
+private fun parseMediaFilter(filterOption: String): String {
+    return when {
+        filterOption.contains("Games") -> "Games"
+        filterOption.contains("Movies") -> "Movies"
+        filterOption.contains("Music") -> "Music"
+        else -> "All"
+    }
+}
+
+private fun buildFilterOption(sortMode: String, mediaFilter: String): String {
+    if (sortMode == "Default" && mediaFilter == "All") return "Default"
+    if (sortMode == "Recently Added" && mediaFilter == "All") return "Recently Added"
+    return "$sortMode|$mediaFilter"
+}
+
 @Composable
 fun LibraryDashboardScreen(
     gameRepository: GameRepository,
@@ -87,30 +106,39 @@ fun LibraryDashboardScreen(
         searchQuery = ""
     }
 
-    val filteredGames = remember(games, searchQuery, filterOption, disabledIds) {
+    val currentSortMode = remember(filterOption) { parseSortMode(filterOption) }
+    val currentMediaFilter = remember(filterOption) { parseMediaFilter(filterOption) }
+
+    val filteredGames = remember(games, searchQuery, currentSortMode, currentMediaFilter, disabledIds) {
         if (disabledIds.contains("media_games")) return@remember emptyList()
+        if (currentMediaFilter != "All" && currentMediaFilter != "Games") return@remember emptyList()
         val validGames = games.filter { game ->
             if (disabledIds.contains(game.platformId)) return@filter false
             val platform = StaticData.platforms.find { it.id == game.platformId }
             platform == null || !disabledIds.contains(platform.manufacturerId)
         }
-        val baseList = if (filterOption == "Recently Added") validGames.sortedByDescending { it.dateAdded } else validGames.sortedBy { it.title }
+        val isRecentlyAdded = (currentSortMode == "Recently Added")
+        val baseList = if (isRecentlyAdded) validGames.sortedByDescending { it.dateAdded } else validGames.sortedBy { it.title }
         if (searchQuery.isEmpty()) baseList.take(10)
         else baseList.filter { it.title.contains(searchQuery, ignoreCase = true) }
     }
 
-    val filteredMovies = remember(movies, searchQuery, filterOption, disabledIds) {
+    val filteredMovies = remember(movies, searchQuery, currentSortMode, currentMediaFilter, disabledIds) {
         if (disabledIds.contains("media_movies")) return@remember emptyList()
+        if (currentMediaFilter != "All" && currentMediaFilter != "Movies") return@remember emptyList()
         val validMovies = movies.filter { !disabledIds.contains(it.formatId) }
-        val baseList = if (filterOption == "Recently Added") validMovies.sortedByDescending { it.dateAdded } else validMovies.sortedBy { it.title }
+        val isRecentlyAdded = (currentSortMode == "Recently Added")
+        val baseList = if (isRecentlyAdded) validMovies.sortedByDescending { it.dateAdded } else validMovies.sortedBy { it.title }
         if (searchQuery.isEmpty()) baseList.take(10)
         else baseList.filter { it.title.contains(searchQuery, ignoreCase = true) }
     }
 
-    val filteredMusic = remember(music, searchQuery, filterOption, disabledIds) {
+    val filteredMusic = remember(music, searchQuery, currentSortMode, currentMediaFilter, disabledIds) {
         if (disabledIds.contains("media_music")) return@remember emptyList()
+        if (currentMediaFilter != "All" && currentMediaFilter != "Music") return@remember emptyList()
         val validMusic = music.filter { !disabledIds.contains(it.formatId) }
-        val baseList = if (filterOption == "Recently Added") validMusic.sortedByDescending { it.dateAdded } else validMusic.sortedBy { it.title }
+        val isRecentlyAdded = (currentSortMode == "Recently Added")
+        val baseList = if (isRecentlyAdded) validMusic.sortedByDescending { it.dateAdded } else validMusic.sortedBy { it.title }
         if (searchQuery.isEmpty()) baseList.take(10)
         else baseList.filter { it.title.contains(searchQuery, ignoreCase = true) || it.artist.contains(searchQuery, ignoreCase = true) }
     }
@@ -133,6 +161,7 @@ fun LibraryDashboardScreen(
                         searchQuery = searchQuery,
                         onSearchQueryChange = { searchQuery = it },
                         onScanClick = onScanClick,
+                        filterOption = filterOption,
                         onFilterOptionSelected = onFilterOptionChange
                     )
 
@@ -164,12 +193,14 @@ fun LibraryDashboardScreen(
                 .padding(bottom = 16.dp)
         ) {
 
-                    // 4. Content Sections
+            // 4. Content Sections
+            val isRecentlyAdded = filterOption.contains("Recently Added")
+
             // Games Section
             if (!disabledIds.contains("media_games") && filteredGames.isNotEmpty()) {
                 val sectionTitle = when {
                     searchQuery.isNotEmpty() -> "Games Search"
-                    filterOption == "Recently Added" -> "Recently Added Games"
+                    isRecentlyAdded -> "Recently Added Games"
                     else -> "My Games"
                 }
                 DashboardSection(
@@ -191,7 +222,7 @@ fun LibraryDashboardScreen(
             if (!disabledIds.contains("media_movies") && filteredMovies.isNotEmpty()) {
                 val sectionTitle = when {
                     searchQuery.isNotEmpty() -> "Movies Search"
-                    filterOption == "Recently Added" -> "Recently Added Movies"
+                    isRecentlyAdded -> "Recently Added Movies"
                     else -> "My Movies"
                 }
                 DashboardSection(
@@ -214,7 +245,7 @@ fun LibraryDashboardScreen(
             if (!disabledIds.contains("media_music") && filteredMusic.isNotEmpty()) {
                 val sectionTitle = when {
                     searchQuery.isNotEmpty() -> "Music Search"
-                    filterOption == "Recently Added" -> "Recently Added Music"
+                    isRecentlyAdded -> "Recently Added Music"
                     else -> "My Music"
                 }
                 DashboardSection(
@@ -268,6 +299,7 @@ fun SearchAndFilterRow(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     onScanClick: () -> Unit,
+    filterOption: String = "Default",
     onFilterOptionSelected: (String) -> Unit
 ) {
     var filterMenuExpanded by remember { mutableStateOf(false) }
@@ -366,38 +398,150 @@ fun SearchAndFilterRow(
 
         // Filter Button
         Box {
+            val currentSortMode = parseSortMode(filterOption)
+            val currentMediaFilter = parseMediaFilter(filterOption)
+            val isCustomView = currentSortMode != "Default" || currentMediaFilter != "All"
+
             NeonIconButton(
                 iconPainter = painterResource(id = R.drawable.control),
                 onClick = { filterMenuExpanded = true },
                 size = 48.dp,
                 iconSize = 28.dp,
-                color = MaterialTheme.colorScheme.primary,
+                color = if (isCustomView) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
                 contentDescription = "Filter"
             )
 
-            MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(surface = Color.Black.copy(alpha = 0.4f))) {
+            MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(surface = Color.Black.copy(alpha = 0.95f))) {
                 DropdownMenu(
                     expanded = filterMenuExpanded,
                     onDismissRequest = { filterMenuExpanded = false },
                     modifier = Modifier
-                        .background(Color.Black.copy(alpha = 0.4f))
-                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), getAppCorners(8.dp))
+                        .background(Color.Black.copy(alpha = 0.95f))
+                        .border(1.dp, MaterialTheme.colorScheme.primary, getAppCorners(8.dp))
                 ) {
-                    DropdownMenuItem(
-                        text = { Text("Default View", color = Color.White, fontWeight = FontWeight.Bold) },
-                        onClick = {
-                            onFilterOptionSelected("Default")
-                            filterMenuExpanded = false
-                        }
+                    val primaryColor = MaterialTheme.colorScheme.primary
+
+                    // Section 1: ORDER / SORT
+                    Text(
+                        text = "ORDER",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = primaryColor.copy(alpha = 0.7f),
+                            letterSpacing = 0.8.sp
+                        ),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                     )
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-                    DropdownMenuItem(
-                        text = { Text("Recently Added", color = Color.White, fontWeight = FontWeight.Bold) },
-                        onClick = {
-                            onFilterOptionSelected("Recently Added")
-                            filterMenuExpanded = false
-                        }
+
+                    val sortOptions = listOf(
+                        "Default" to "Default View",
+                        "Recently Added" to "Recently Added"
                     )
+
+                    sortOptions.forEach { (mode, label) ->
+                        val isSelected = (currentSortMode == mode)
+                        DropdownMenuItem(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    if (isSelected) primaryColor.copy(alpha = 0.2f) else Color.Transparent
+                                ),
+                            text = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(10.dp)
+                                            .background(
+                                                if (isSelected) primaryColor else Color.Transparent,
+                                                getAppCorners(3.dp)
+                                            )
+                                            .border(
+                                                1.5.dp,
+                                                if (isSelected) primaryColor else Color.White.copy(alpha = 0.4f),
+                                                getAppCorners(3.dp)
+                                            )
+                                    )
+                                    Text(
+                                        text = label,
+                                        color = if (isSelected) primaryColor else Color.White,
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium
+                                        )
+                                    )
+                                }
+                            },
+                            onClick = {
+                                val newOption = buildFilterOption(mode, currentMediaFilter)
+                                onFilterOptionSelected(newOption)
+                                filterMenuExpanded = false
+                            }
+                        )
+                    }
+
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.15f), modifier = Modifier.padding(vertical = 4.dp))
+
+                    // Section 2: MEDIA FILTER
+                    Text(
+                        text = "MEDIA",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = primaryColor.copy(alpha = 0.7f),
+                            letterSpacing = 0.8.sp
+                        ),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+
+                    val mediaOptions = listOf(
+                        "All" to "View All",
+                        "Games" to "Games Only",
+                        "Movies" to "Movies Only",
+                        "Music" to "Music Only"
+                    )
+
+                    mediaOptions.forEach { (filter, label) ->
+                        val isSelected = (currentMediaFilter == filter)
+                        DropdownMenuItem(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    if (isSelected) primaryColor.copy(alpha = 0.2f) else Color.Transparent
+                                ),
+                            text = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(10.dp)
+                                            .background(
+                                                if (isSelected) primaryColor else Color.Transparent,
+                                                getAppCorners(3.dp)
+                                            )
+                                            .border(
+                                                1.5.dp,
+                                                if (isSelected) primaryColor else Color.White.copy(alpha = 0.4f),
+                                                getAppCorners(3.dp)
+                                            )
+                                    )
+                                    Text(
+                                        text = label,
+                                        color = if (isSelected) primaryColor else Color.White,
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium
+                                        )
+                                    )
+                                }
+                            },
+                            onClick = {
+                                val newOption = buildFilterOption(currentSortMode, filter)
+                                onFilterOptionSelected(newOption)
+                                filterMenuExpanded = false
+                            }
+                        )
+                    }
                 }
             }
         }

@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.shelfpalace.R
+import com.example.shelfpalace.data.Music
 import com.example.shelfpalace.data.MusicRepository
 import com.example.shelfpalace.data.SettingsRepository
 import com.example.shelfpalace.data.SortOption
@@ -72,11 +73,19 @@ fun MusicListScreen(
         else validList.filter { it.title.matchesSearchQuery(searchQuery) || it.artist.matchesSearchQuery(searchQuery) }
 
         when (currentSortOption) {
-            SortOption.NAME -> filtered.sortedBy { it.title }
+            SortOption.NAME -> filtered.sortedBy { it.title.lowercase() }
             SortOption.RELEASE_DATE -> filtered.sortedByDescending { it.releaseDate }
-            SortOption.PLATFORM -> filtered.sortedBy { music -> 
-                StaticData.musicFormats.find { it.id == music.formatId }?.name ?: ""
-            }
+            SortOption.PLATFORM -> filtered.sortedWith(
+                compareBy<Music> { music ->
+                    val idx = StaticData.musicFormats.indexOfFirst { it.id == music.formatId }
+                    if (idx >= 0) idx else Int.MAX_VALUE
+                }.thenBy { it.title.lowercase() }
+            )
+            SortOption.PLATFORM_NAME -> filtered.sortedWith(
+                compareBy<Music> { music ->
+                    StaticData.musicFormats.find { it.id == music.formatId }?.name ?: ""
+                }.thenBy { it.title.lowercase() }
+            )
         }
     }
 
@@ -184,7 +193,8 @@ fun MusicListScreen(
                         SortIconButton(
                             currentSortOption = currentSortOption,
                             onSortOptionSelected = { scope.launch { settingsRepository.setSortOption(it) } },
-                            color = accentColor
+                            color = accentColor,
+                            showConsoleSort = true
                         )
                         NeonIconButton(
                             iconPainter = painterResource(id = R.drawable.search),

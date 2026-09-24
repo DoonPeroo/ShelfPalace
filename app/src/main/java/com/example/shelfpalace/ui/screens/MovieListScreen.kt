@@ -77,11 +77,19 @@ fun MovieListScreen(
         else validList.filter { it.title.matchesSearchQuery(searchQuery) }
 
         when (currentSortOption) {
-            SortOption.NAME -> filtered.sortedBy { it.title }
+            SortOption.NAME -> filtered.sortedBy { it.title.lowercase() }
             SortOption.RELEASE_DATE -> filtered.sortedByDescending { it.releaseDate }
-            SortOption.PLATFORM -> filtered.sortedBy { movie -> 
-                StaticData.movieFormats.find { it.id == movie.formatId }?.name ?: ""
-            }
+            SortOption.PLATFORM -> filtered.sortedWith(
+                compareBy<Movie> { movie ->
+                    val idx = StaticData.movieFormats.indexOfFirst { it.id == movie.formatId }
+                    if (idx >= 0) idx else Int.MAX_VALUE
+                }.thenBy { it.title.lowercase() }
+            )
+            SortOption.PLATFORM_NAME -> filtered.sortedWith(
+                compareBy<Movie> { movie ->
+                    StaticData.movieFormats.find { it.id == movie.formatId }?.name ?: ""
+                }.thenBy { it.title.lowercase() }
+            )
         }
     }
 
@@ -188,7 +196,8 @@ fun MovieListScreen(
                         SortIconButton(
                             currentSortOption = currentSortOption,
                             onSortOptionSelected = { scope.launch { settingsRepository.setSortOption(it) } },
-                            color = accentColor
+                            color = accentColor,
+                            showConsoleSort = true
                         )
                         NeonIconButton(
                             iconPainter = painterResource(id = R.drawable.search),

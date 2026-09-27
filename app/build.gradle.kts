@@ -15,8 +15,8 @@ android {
         applicationId = "com.example.shelfpalace"
         minSdk = 24
         targetSdk = 37
-        versionCode = 12
-        versionName = "1.01"
+        versionCode = 13
+        versionName = "1.02"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

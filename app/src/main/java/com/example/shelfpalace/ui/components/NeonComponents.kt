@@ -137,6 +137,7 @@ fun NeonButton(
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
     iconPainter: androidx.compose.ui.graphics.painter.Painter? = null,
+    iconSize: Dp = 22.dp,
     color: Color = MaterialTheme.colorScheme.primary,
     containerColor: Color = MaterialTheme.colorScheme.surface.copy(alpha = 0.4f),
     height: Dp = 52.dp,
@@ -181,13 +182,13 @@ fun NeonButton(
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(iconSize)
                     )
                 } else if (iconPainter != null) {
-                    Icon(
+                    Image(
                         painter = iconPainter,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(iconSize)
                     )
                 }
                 

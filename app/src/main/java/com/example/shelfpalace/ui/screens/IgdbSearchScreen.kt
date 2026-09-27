@@ -19,11 +19,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.shelfpalace.R
-import com.example.shelfpalace.data.remote.IgdbGame
-import com.example.shelfpalace.data.remote.IgdbService
+import com.example.shelfpalace.data.remote.*
 import com.example.shelfpalace.ui.components.*
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

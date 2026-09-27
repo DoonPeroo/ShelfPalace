@@ -52,6 +52,13 @@ data class IgdbCompanyInfo(
 )
 
 @JsonClass(generateAdapter = true)
+data class IgdbExternalGame(
+    val id: Long?,
+    val uid: String?,
+    val game: IgdbGame?
+)
+
+@JsonClass(generateAdapter = true)
 data class IgdbGenre(
     val id: Long?,
     val name: String?

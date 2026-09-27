@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <!-- Viewfinder Scanner Corner Brackets -->
+  <path
+      android:fillColor="#FFFFFFFF"
+      android:pathData="M1,2h6v2.5H3.5v3.5H1V2z M17,2h6v5h-2.5V4.5H17V2z M1,17h2.5v3.5H7V22H1v-5z M20.5,17V20.5H17V22h6v-5h-2.5z" />
+  <!-- Bold 1D Barcode Vertical Bars -->
+  <path
+      android:fillColor="#FFFFFFFF"
+      android:pathData="M2.5,6.5h2.5v11H2.5z M6.5,6.5h1.5v11H6.5z M9.5,6.5h2.5v11H9.5z M13,6.5h1.5v11H13z M15.5,6.5h2v11H15.5z M18.5,6.5h3v11H18.5z" />
+</vector>

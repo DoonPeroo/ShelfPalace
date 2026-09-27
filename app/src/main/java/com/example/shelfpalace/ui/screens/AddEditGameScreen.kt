@@ -1,4 +1,7 @@
+@file:OptIn(ExperimentalGetImage::class)
 package com.example.shelfpalace.ui.screens
+
+import androidx.camera.core.ExperimentalGetImage
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -43,6 +46,8 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.example.shelfpalace.R
 import com.example.shelfpalace.data.Game
 import com.example.shelfpalace.data.GameRepository
+import com.example.shelfpalace.data.SettingsRepository
+import com.example.shelfpalace.data.StaticData
 import com.example.shelfpalace.ui.components.*
 import com.example.shelfpalace.ui.theme.SynthwaveCyan
 import com.example.shelfpalace.ui.theme.SynthwaveDark
@@ -93,24 +98,31 @@ private val GENRES = listOf(
     "Party",
 )
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class, ExperimentalGetImage::class)
 @Composable
 fun AddEditGameScreen(
     platformId: String?,
     gameId: String?,
     igdbId: Long? = null,
+    prefilledTitle: String? = null,
+    prefilledBarcode: String? = null,
     repository: GameRepository,
+    settingsRepository: SettingsRepository,
     onSave: (String) -> Unit,
-    onIgdbSearch: (String) -> Unit,
+    onIgdbSearch: (query: String, platformId: String) -> Unit,
     onBack: () -> Unit,
     onClose: () -> Unit = onBack,
     @Suppress("UNUSED_PARAMETER") onHome: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val disabledIds by settingsRepository.disabledIds.collectAsState(initial = emptySet())
+    val showPlatformDropdown = remember(platformId, gameId) {
+        gameId == null && platformId.isNullOrBlank()
+    }
     
     var currentPlatformId by rememberSaveable { mutableStateOf(platformId ?: "") }
-    var title by rememberSaveable { mutableStateOf("") }
-    var barcode by rememberSaveable { mutableStateOf("") }
+    var title by rememberSaveable { mutableStateOf(prefilledTitle ?: "") }
+    var barcode by rememberSaveable { mutableStateOf(prefilledBarcode ?: "") }
     var releaseDate by rememberSaveable { mutableStateOf("") }
     var displayDate by rememberSaveable { mutableStateOf("") }
     var genre by rememberSaveable { mutableStateOf("") }
@@ -136,6 +148,7 @@ fun AddEditGameScreen(
     var bitmapToCrop by remember { mutableStateOf<Bitmap?>(null) }
     var showCropDialog by remember { mutableStateOf(false) }
     var showDuplicateDialog by remember { mutableStateOf(false) }
+    var showBarcodeScannerModal by remember { mutableStateOf(false) }
     var shouldLaunchCamera by rememberSaveable { mutableStateOf(false) }
     
     val cameraPermissionState = rememberPermissionState(android.Manifest.permission.CAMERA)
@@ -235,18 +248,21 @@ fun AddEditGameScreen(
     LaunchedEffect(igdbId) {
         if (igdbId != null) {
             currentIgdbId = igdbId
-            val igdbGame = IgdbService.getGameById(igdbId)
-            igdbGame?.let {
-                title = it.name ?: ""
-                description = it.summary ?: ""
-                genre = it.genres?.firstOrNull()?.name ?: ""
-                developer = it.involvedCompanies?.getOrNull(0)?.company?.name ?: ""
-                publisher = it.involvedCompanies?.getOrNull(1)?.company?.name ?: ""
-                userRating = it.rating
-                igdbCriticRating = it.aggregatedRating
-                if (criticRating == null) criticRating = it.aggregatedRating
+            if (barcode.isBlank() && !prefilledBarcode.isNullOrBlank()) {
+                barcode = prefilledBarcode
+            }
+            val igdbGame = withContext(Dispatchers.IO) { IgdbService.getGameById(igdbId) }
+            if (igdbGame != null) {
+                title = igdbGame.name ?: ""
+                description = igdbGame.summary ?: ""
+                genre = igdbGame.genres?.firstOrNull()?.name ?: ""
+                developer = igdbGame.involvedCompanies?.getOrNull(0)?.company?.name ?: ""
+                publisher = igdbGame.involvedCompanies?.getOrNull(1)?.company?.name ?: ""
+                userRating = igdbGame.rating
+                igdbCriticRating = igdbGame.aggregatedRating
+                if (criticRating == null) criticRating = igdbGame.aggregatedRating
                 
-                it.firstReleaseDate?.let { timestamp ->
+                igdbGame.firstReleaseDate?.let { timestamp ->
                     val date = java.util.Date(timestamp * 1000)
                     val cal = java.util.Calendar.getInstance().apply { time = date }
                     selectedYear = cal.get(java.util.Calendar.YEAR).toString()
@@ -256,7 +272,7 @@ fun AddEditGameScreen(
                     displayDate = DateUtils.formatDisplayDate(releaseDate)
                 }
                 
-                it.cover?.url?.let { url ->
+                igdbGame.cover?.url?.let { url ->
                     val highResUrl = if (url.startsWith("//")) "https:$url" else url
                     coverUri = highResUrl.replace("t_thumb", "t_cover_big")
                 }
@@ -439,7 +455,7 @@ fun AddEditGameScreen(
                     NeonButton(
                         text = if (isEditMode) "UPDATE DATA VIA IGDB" else "IMPORT FROM IGDB",
                         icon = Icons.Rounded.Language,
-                        onClick = { onIgdbSearch(title) },
+                        onClick = { onIgdbSearch(title, currentPlatformId) },
                         modifier = Modifier.fillMaxWidth(),
                         color = MaterialTheme.colorScheme.secondary,
                         height = 40.dp
@@ -456,11 +472,55 @@ fun AddEditGameScreen(
                         colors = synthwaveTextFieldColors()
                     )
 
+                    if (showPlatformDropdown) {
+                        val platformOptions = remember(disabledIds) {
+                            StaticData.platforms.filter { !disabledIds.contains(it.id) && !disabledIds.contains(it.manufacturerId) }
+                        }
+                        val currentPlatformName = remember(currentPlatformId) {
+                            StaticData.platforms.find { it.id == currentPlatformId }?.name ?: ""
+                        }
+
+                        FormDropdownField(
+                            label = "Console / Platform",
+                            selectedValue = currentPlatformName,
+                            options = platformOptions.map { it.name },
+                            onOptionSelected = { selectedName ->
+                                val foundPlatform = platformOptions.find { it.name == selectedName }
+                                if (foundPlatform != null) {
+                                    currentPlatformId = foundPlatform.id
+                                }
+                            },
+                            placeholder = "Select Console / Platform..."
+                        )
+                    }
+
                     OutlinedTextField(
                         value = barcode,
                         onValueChange = { barcode = it },
                         label = { Text("Barcode / EAN") },
                         placeholder = { Text("z. B. 4006209000000") },
+                        trailingIcon = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.padding(end = 4.dp)
+                            ) {
+                                Text(
+                                    text = "|",
+                                    color = Color.White.copy(alpha = 0.35f),
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Normal
+                                )
+                                IconButton(onClick = { showBarcodeScannerModal = true }) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.barcode_scan),
+                                        contentDescription = "Scan Barcode",
+                                        tint = Color.Unspecified,
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                }
+                            }
+                        },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = getAppCorners(8.dp),
@@ -555,37 +615,6 @@ fun AddEditGameScreen(
                         colors = synthwaveTextFieldColors()
                     )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = (igdbCriticRating ?: criticRating)?.let { String.format(Locale.US, "%.0f", if (it <= 10.0) it * 10.0 else it) } ?: "",
-                            onValueChange = { 
-                                val parsed = it.replace(',', '.').toDoubleOrNull()
-                                igdbCriticRating = parsed
-                                criticRating = parsed
-                            },
-                            label = { Text("Critic Rating") },
-                            placeholder = { Text("e.g. 88") },
-                            modifier = Modifier.weight(1f),
-                            shape = getAppCorners(8.dp),
-                            singleLine = true,
-                            colors = synthwaveTextFieldColors()
-                        )
-
-                        OutlinedTextField(
-                            value = userRating?.let { String.format(Locale.US, "%.1f", if (it > 10.0) it / 10.0 else it).removeSuffix(".0") } ?: "",
-                            onValueChange = { userRating = it.replace(',', '.').toDoubleOrNull() },
-                            label = { Text("User Rating") },
-                            placeholder = { Text("e.g. 8.5") },
-                            modifier = Modifier.weight(1f),
-                            shape = getAppCorners(8.dp),
-                            singleLine = true,
-                            colors = synthwaveTextFieldColors()
-                        )
-                    }
-
                     OutlinedTextField(
                         value = description,
                         onValueChange = { description = it },
@@ -605,6 +634,7 @@ fun AddEditGameScreen(
                         NeonButton(
                             text = stringResource(R.string.action_capture),
                             iconPainter = painterResource(id = R.drawable.camera),
+                            iconSize = 26.dp,
                             onClick = { 
                                 shouldLaunchCamera = true
                                 if (!cameraPermissionState.status.isGranted) {
@@ -617,7 +647,8 @@ fun AddEditGameScreen(
 
                         NeonButton(
                             text = stringResource(R.string.action_select),
-                            icon = Icons.Rounded.AddAPhoto,
+                            iconPainter = painterResource(id = R.drawable.add_cover),
+                            iconSize = 26.dp,
                             onClick = { 
                                 pickMedia.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly))
                             },
@@ -735,6 +766,16 @@ fun AddEditGameScreen(
             }
         )
     }
+
+    if (showBarcodeScannerModal) {
+        BarcodeScanDialog(
+            onBarcodeScanned = { scannedCode ->
+                barcode = scannedCode
+                showBarcodeScannerModal = false
+            },
+            onDismiss = { showBarcodeScannerModal = false }
+        )
+    }
 }
 
 @Preview(showBackground = true)
@@ -748,12 +789,14 @@ fun AddEditGameScreenPreview() {
         Box(modifier = Modifier.background(DarkBackground)) {
             // Note: In real app, the title would be entered by user.
             // This preview is just to see the layout.
+            val settingsRepository = remember { SettingsRepository(context) }
             AddEditGameScreen(
                 platformId = "sony_ps2",
                 gameId = null,
                 repository = repository,
+                settingsRepository = settingsRepository,
                 onSave = {},
-                onIgdbSearch = {},
+                onIgdbSearch = { _, _ -> },
                 onBack = {},
                 onHome = {}
             )

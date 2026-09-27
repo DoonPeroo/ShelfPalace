@@ -1,4 +1,7 @@
+@file:OptIn(ExperimentalGetImage::class)
 package com.example.shelfpalace.ui.screens
+
+import androidx.camera.core.ExperimentalGetImage
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -19,12 +22,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.shelfpalace.ui.components.BarcodeScanDialog
 import com.example.shelfpalace.R
 import com.example.shelfpalace.data.Movie
 import com.example.shelfpalace.data.MovieRepository
+import com.example.shelfpalace.data.SettingsRepository
 import com.example.shelfpalace.data.StaticData
 import com.example.shelfpalace.data.remote.TmdbService
 import com.example.shelfpalace.ui.components.*
@@ -66,18 +72,25 @@ fun AddEditMovieScreen(
     movieId: String?,
     tmdbId: Long? = null,
     language: String = "en-US",
+    prefilledTitle: String? = null,
+    prefilledBarcode: String? = null,
     repository: MovieRepository,
+    settingsRepository: SettingsRepository,
     onSave: (String) -> Unit,
-    onTmdbSearch: (query: String, year: String, language: String) -> Unit = { _, _, _ -> },
+    onTmdbSearch: (query: String, formatId: String, year: String, language: String) -> Unit = { _, _, _, _ -> },
     onBack: () -> Unit,
     onClose: () -> Unit = onBack,
     @Suppress("UNUSED_PARAMETER") onHome: () -> Unit,
 ) {
     val context = LocalContext.current
+    val disabledIds by settingsRepository.disabledIds.collectAsState(initial = emptySet())
+    val showFormatDropdown = remember(formatId, movieId) {
+        movieId == null && formatId.isNullOrBlank()
+    }
     
     var currentFormatId by rememberSaveable { mutableStateOf(formatId ?: "") }
-    var title by rememberSaveable { mutableStateOf("") }
-    var barcode by rememberSaveable { mutableStateOf("") }
+    var title by rememberSaveable { mutableStateOf(prefilledTitle ?: "") }
+    var barcode by rememberSaveable { mutableStateOf(prefilledBarcode ?: "") }
     var releaseDate by rememberSaveable { mutableStateOf("") }
     var displayDate by rememberSaveable { mutableStateOf("") }
     var genre by rememberSaveable { mutableStateOf("") }
@@ -95,6 +108,7 @@ fun AddEditMovieScreen(
     var bitmapToCrop by remember { mutableStateOf<Bitmap?>(null) }
     var showCropDialog by remember { mutableStateOf(false) }
     var showDuplicateDialog by remember { mutableStateOf(false) }
+    var showBarcodeScannerModal by remember { mutableStateOf(false) }
     var shouldLaunchCamera by rememberSaveable { mutableStateOf(false) }
     
     val cameraPermissionState = rememberPermissionState(android.Manifest.permission.CAMERA)
@@ -167,6 +181,9 @@ fun AddEditMovieScreen(
                 TmdbService.getMovieDetails(tmdbId, language = language)
             }
             if (details != null) {
+                if (barcode.isBlank() && !prefilledBarcode.isNullOrBlank()) {
+                    barcode = prefilledBarcode
+                }
                 if (!details.title.isNullOrBlank()) title = details.title
                 if (!details.releaseDate.isNullOrBlank()) {
                     releaseDate = details.releaseDate
@@ -347,7 +364,7 @@ fun AddEditMovieScreen(
                         icon = Icons.Rounded.Movie,
                         onClick = {
                             val yearPart = selectedYear.takeIf { it.isNotBlank() } ?: ""
-                            onTmdbSearch(title, yearPart, language)
+                            onTmdbSearch(title, currentFormatId, yearPart, language)
                         },
                         modifier = Modifier.fillMaxWidth(),
                         color = MaterialTheme.colorScheme.secondary,
@@ -363,11 +380,55 @@ fun AddEditMovieScreen(
                         colors = synthwaveTextFieldColors()
                     )
 
+                    if (showFormatDropdown) {
+                        val formatOptions = remember(disabledIds) {
+                            StaticData.movieFormats.filter { !disabledIds.contains(it.id) }
+                        }
+                        val currentFormatName = remember(currentFormatId) {
+                            StaticData.movieFormats.find { it.id == currentFormatId }?.name ?: ""
+                        }
+
+                        FormDropdownField(
+                            label = "Movie Format",
+                            selectedValue = currentFormatName,
+                            options = formatOptions.map { it.name },
+                            onOptionSelected = { selectedName ->
+                                val found = formatOptions.find { it.name == selectedName }
+                                if (found != null) {
+                                    currentFormatId = found.id
+                                }
+                            },
+                            placeholder = "Select Format..."
+                        )
+                    }
+
                     OutlinedTextField(
                         value = barcode,
                         onValueChange = { barcode = it },
                         label = { Text("Barcode / EAN") },
                         placeholder = { Text("z. B. 4006209000000") },
+                        trailingIcon = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.padding(end = 4.dp)
+                            ) {
+                                Text(
+                                    text = "|",
+                                    color = Color.White.copy(alpha = 0.35f),
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Normal
+                                )
+                                IconButton(onClick = { showBarcodeScannerModal = true }) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.barcode_scan),
+                                        contentDescription = "Scan Barcode",
+                                        tint = Color.Unspecified,
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                }
+                            }
+                        },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = getAppCorners(8.dp),
@@ -479,6 +540,7 @@ fun AddEditMovieScreen(
                         NeonButton(
                             text = stringResource(R.string.action_capture),
                             iconPainter = painterResource(id = R.drawable.camera),
+                            iconSize = 26.dp,
                             onClick = { 
                                 shouldLaunchCamera = true
                                 if (!cameraPermissionState.status.isGranted) {
@@ -491,7 +553,8 @@ fun AddEditMovieScreen(
 
                         NeonButton(
                             text = stringResource(R.string.action_select),
-                            icon = Icons.Rounded.AddAPhoto,
+                            iconPainter = painterResource(id = R.drawable.add_cover),
+                            iconSize = 26.dp,
                             onClick = { 
                                 pickMedia.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly))
                             },
@@ -607,6 +670,16 @@ fun AddEditMovieScreen(
                 showCropDialog = false
                 bitmapToCrop = null
             }
+        )
+    }
+
+    if (showBarcodeScannerModal) {
+        BarcodeScanDialog(
+            onBarcodeScanned = { scannedCode ->
+                barcode = scannedCode
+                showBarcodeScannerModal = false
+            },
+            onDismiss = { showBarcodeScannerModal = false }
         )
     }
 }

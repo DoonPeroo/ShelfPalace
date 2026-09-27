@@ -203,7 +203,7 @@ fun GameListScreen(
                             currentSortOption = currentSortOption,
                             onSortOptionSelected = { scope.launch { settingsRepository.setSortOption(it) } },
                             color = accentColor,
-                            showConsoleSort = true
+                            showConsoleSort = platformId == "all"
                         )
                         NeonIconButton(
                             iconPainter = painterResource(id = R.drawable.search),

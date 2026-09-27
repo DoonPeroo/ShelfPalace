@@ -28,7 +28,13 @@ sealed interface Destinations {
     data class GameDetail(val gameId: String) : Destinations
 
     @Serializable
-    data class AddEditGame(val platformId: String? = null, val gameId: String? = null, val igdbId: Long? = null) : Destinations
+    data class AddEditGame(
+        val platformId: String? = null,
+        val gameId: String? = null,
+        val igdbId: Long? = null,
+        val prefilledTitle: String? = null,
+        val prefilledBarcode: String? = null
+    ) : Destinations
 
     @Serializable
     data class MovieList(val formatId: String) : Destinations
@@ -41,7 +47,9 @@ sealed interface Destinations {
         val formatId: String? = null,
         val movieId: String? = null,
         val tmdbId: Long? = null,
-        val language: String = "en-US"
+        val language: String = "en-US",
+        val prefilledTitle: String? = null,
+        val prefilledBarcode: String? = null
     ) : Destinations
 
     @Serializable
@@ -51,13 +59,22 @@ sealed interface Destinations {
     data class MusicDetail(val musicId: String) : Destinations
 
     @Serializable
-    data class AddEditMusic(val formatId: String? = null, val musicId: String? = null, val discogsId: Long? = null) : Destinations
+    data class AddEditMusic(
+        val formatId: String? = null,
+        val musicId: String? = null,
+        val discogsId: Long? = null,
+        val prefilledTitle: String? = null,
+        val prefilledBarcode: String? = null
+    ) : Destinations
 
     @Serializable
     data object Scanner : Destinations
 
     @Serializable
-    data class Search(val initialQuery: String = "") : Destinations
+    data class Search(
+        val initialQuery: String = "",
+        val initialBarcode: String? = null
+    ) : Destinations
 
     @Serializable
     data object Settings : Destinations
@@ -69,7 +86,12 @@ sealed interface Destinations {
     data object Statistics : Destinations
 
     @Serializable
-    data class IgdbSearch(val platformId: String? = null, val gameId: String? = null, val initialQuery: String? = null) : Destinations
+    data class IgdbSearch(
+        val platformId: String? = null,
+        val gameId: String? = null,
+        val initialQuery: String? = null,
+        val prefilledBarcode: String? = null
+    ) : Destinations
 
     @Serializable
     data class DiscogsSearch(
@@ -79,7 +101,8 @@ sealed interface Destinations {
         val initialFormat: String? = null,
         val initialLabel: String? = null,
         val initialCountry: String? = null,
-        val initialYear: String? = null
+        val initialYear: String? = null,
+        val prefilledBarcode: String? = null
     ) : Destinations
 
     @Serializable
@@ -88,6 +111,7 @@ sealed interface Destinations {
         val movieId: String? = null,
         val initialQuery: String? = null,
         val initialYear: String? = null,
-        val initialLanguage: String = "en-US"
+        val initialLanguage: String = "en-US",
+        val prefilledBarcode: String? = null
     ) : Destinations
 }

@@ -197,7 +197,7 @@ fun MovieListScreen(
                             currentSortOption = currentSortOption,
                             onSortOptionSelected = { scope.launch { settingsRepository.setSortOption(it) } },
                             color = accentColor,
-                            showConsoleSort = true
+                            showConsoleSort = formatId == "all"
                         )
                         NeonIconButton(
                             iconPainter = painterResource(id = R.drawable.search),

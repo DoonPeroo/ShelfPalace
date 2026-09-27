@@ -1,28 +1,14 @@
 package com.example.shelfpalace.ui.screens
 
-import android.Manifest
-import android.view.Gravity
-import android.view.WindowManager
-import androidx.activity.compose.BackHandler
-import androidx.camera.core.*
-import androidx.camera.core.ExperimentalGetImage
-import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,13 +17,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -49,6 +34,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.shelfpalace.R
+import com.example.shelfpalace.data.remote.BarcodeLookupService
 import com.example.shelfpalace.data.*
 import com.example.shelfpalace.ui.components.*
 import com.example.shelfpalace.util.PlatformUtils
@@ -63,40 +49,136 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
 
+internal val TITLE_STOPWORDS = setOf(
+    "the", "a", "an", "and", "or", "of", "for", "in", "on", "at", "to", "with",
+    "und", "oder", "der", "die", "das", "des", "dem", "den", "ein", "eine", "einer", "eines",
+    "mit", "für", "fuer", "von", "im", "am", "aus", "bei", "zu", "zum", "zur",
+    "edition", "version", "game", "games", "spiel", "spiele", "vol", "volume", "collection", "bundle",
+    "remastered", "definitive", "ultimate", "deluxe", "limited", "special", "gold",
+    "premium", "standard", "cut", "director", "directors", "series", "trilogy",
+)
+
+private val GERMAN_TO_ENGLISH_MAP = mapOf(
+    "der herr der ringe" to "the lord of the rings",
+    "herr der ringe" to "lord of the rings",
+    "die eroberung" to "the lord of the rings: conquest",
+    "eroberung" to "the lord of the rings: conquest",
+    "conquest" to "the lord of the rings: conquest",
+    "schlacht um mittelerde" to "the lord of the rings: battle for middle earth",
+    "das dritte zeitalter" to "the lord of the rings: the third age",
+    "die rückkehr des königs" to "the lord of the rings: return of the king",
+    "die rueckkehr des koenigs" to "the lord of the rings: return of the king",
+    "die zwei türme" to "the lord of the rings: the two towers",
+    "die zwei tuerme" to "the lord of the rings: the two towers",
+    "die gefährten" to "the lord of the rings: fellowship of the ring",
+    "die gefaehrten" to "the lord of the rings: fellowship of the ring",
+    "krieg der sterne" to "star wars",
+    "fluch der karibik" to "pirates of the caribbean",
+    "die hüter des lichts" to "rise of the guardians",
+    "hueter des lichts" to "rise of the guardians",
+    "moorhuhn" to "crazy chicken",
+    "schlag den raab" to "beat the raab",
+    "landwirtschafts simulator" to "farming simulator",
+    "landwirtschafts-simulator" to "farming simulator",
+    "feuerwehr simulator" to "firefighting simulator",
+    "bau simulator" to "construction simulator",
+    "die siedler" to "the settlers",
+    "die schlümpfe" to "the smurfs",
+    "die schlumpfe" to "the smurfs",
+    "wickie und die starken männer" to "vicky the viking",
+    "die biene maja" to "maya the bee",
+    "die simpsons" to "the simpsons",
+    "drachenzähmen leicht gemacht" to "how to train your dragon",
+    "ich einfach unverbesserlich" to "despicable me",
+    "zoomania" to "zootopia",
+    "rapunzel neu verföhnt" to "tangled",
+    "die eiskönigin" to "frozen",
+    "alles steht kopf" to "inside out",
+    "findet nemo" to "finding nemo",
+    "findet dorie" to "finding dory",
+    "die unglaublichen" to "the incredibles",
+    "glücksbärchis" to "care bears",
+    "der magische stift" to "drawn to life",
+    "magische stift" to "drawn to life",
+    "das geheimnisvolle dorf" to "curious village",
+    "die schatulle der panik" to "diabolical box",
+    "die verlorene zukunft" to "unwound future",
+    "zusammen durch die zeit" to "partners in time",
+    "yogi bär" to "yogi bear",
+    "yogi baer" to "yogi bear",
+    "spongebob schwammkopf" to "spongebob squarepants",
+    "winnie puuh" to "winnie the pooh",
+    "das videospiel" to "",
+    "das spiel zum film" to "",
+    "meine tierarztpraxis" to "pet vet",
+    "meine fohlenwelt" to "my horse park",
+)
+
+fun translateGermanToEnglish(raw: String): String {
+    var title = raw.lowercase()
+    GERMAN_TO_ENGLISH_MAP.entries.sortedByDescending { it.key.length }.forEach { (german, english) ->
+        val regex = Regex("(?i)\\b${Regex.escape(german)}\\b")
+        if (regex.containsMatchIn(title)) {
+            title = title.replace(regex, english)
+        }
+    }
+    return title
+}
+
 fun isTitleMatch(localTitle: String, resolvedTitle: String): Boolean {
     if (localTitle.isBlank() || resolvedTitle.isBlank()) return false
-    val clean1 = localTitle.lowercase().replace(Regex("[^a-z0-9\\s]"), " ").trim()
-    val clean2 = resolvedTitle.lowercase().replace(Regex("[^a-z0-9\\s]"), " ").trim()
 
-    if (clean1 == clean2) return true
+    val clean1 = translateGermanToEnglish(localTitle).lowercase().replace(Regex("[^a-z0-9]"), " ").replace(Regex("\\s+"), " ").trim()
+    val clean2 = translateGermanToEnglish(resolvedTitle).lowercase().replace(Regex("[^a-z0-9]"), " ").replace(Regex("\\s+"), " ").trim()
+
+    if (clean1.isEmpty() || clean2.isEmpty()) return false
 
     // If either string is purely numeric (like a barcode "4006209000000"), require exact equality
-    if (clean2.all { it.isDigit() } || clean1.all { it.isDigit() }) {
-        return false
+    if (clean1.all { it.isDigit() } || clean2.all { it.isDigit() }) {
+        return clean1 == clean2
     }
 
-    if (clean2.length >= 4 && clean1.contains(clean2)) return true
-    if (clean1.length >= 4 && clean2.contains(clean1)) return true
+    // 1. Exact normalized title match
+    if (clean1 == clean2) return true
 
-    val words1 = clean1.split(Regex("\\s+")).filter { it.length >= 2 && !it.all { c -> c.isDigit() } }
-    val words2 = clean2.split(Regex("\\s+")).filter { it.length >= 2 && !it.all { c -> c.isDigit() } }
+    // 2. Extract meaningful non-stopword tokens
+    val words1 = clean1.split(" ").filter { it.length >= 2 && !TITLE_STOPWORDS.contains(it) }.toSet()
+    val words2 = clean2.split(" ").filter { it.length >= 2 && !TITLE_STOPWORDS.contains(it) }.toSet()
 
-    if (words1.isNotEmpty() && words2.isNotEmpty()) {
-        val matchingWords = words1.count { w1 -> words2.contains(w1) }
-        val minSize = minOf(words1.size, words2.size)
+    val effective1 = words1.ifEmpty { clean1.split(" ").toSet() }
+    val effective2 = words2.ifEmpty { clean2.split(" ").toSet() }
 
-        if (matchingWords >= 2 && (matchingWords.toFloat() / minSize >= 0.4f)) {
-            return true
-        }
-        if (words1.size == 1 && words2.size == 1 && words1.first() == words2.first()) {
-            return true
-        }
-        if (words1.any { w -> w.length >= 4 && words2.contains(w) }) {
-            return true
-        }
-    }
+    val common = effective1.intersect(effective2)
+    if (common.isEmpty()) return false
 
-    return false
+    val ratio1 = common.size.toDouble() / effective1.size
+    val ratio2 = common.size.toDouble() / effective2.size
+
+    return ratio1 >= 0.85 && ratio2 >= 0.85
+}
+
+fun isExactLibraryMatch(localTitle: String, scannedTitle: String): Boolean {
+    if (localTitle.isBlank() || scannedTitle.isBlank()) return false
+
+    val clean1 = translateGermanToEnglish(localTitle).lowercase().replace(Regex("[^a-z0-9]"), " ").replace(Regex("\\s+"), " ").trim()
+    val clean2 = translateGermanToEnglish(scannedTitle).lowercase().replace(Regex("[^a-z0-9]"), " ").replace(Regex("\\s+"), " ").trim()
+
+    if (clean1.isEmpty() || clean2.isEmpty()) return false
+    if (clean1 == clean2) return true
+
+    val words1 = clean1.split(" ").filter { it.length >= 2 && !TITLE_STOPWORDS.contains(it) }.toSet()
+    val words2 = clean2.split(" ").filter { it.length >= 2 && !TITLE_STOPWORDS.contains(it) }.toSet()
+
+    val effective1 = words1.ifEmpty { clean1.split(" ").toSet() }
+    val effective2 = words2.ifEmpty { clean2.split(" ").toSet() }
+
+    val common = effective1.intersect(effective2)
+    if (common.isEmpty()) return false
+
+    val ratio1 = common.size.toDouble() / effective1.size
+    val ratio2 = common.size.toDouble() / effective2.size
+
+    return ratio1 >= 0.85 && ratio2 >= 0.85
 }
 
 fun isBarcodeMatch(itemBarcode: String?, searchBarcode: String): Boolean {
@@ -106,22 +188,22 @@ fun isBarcodeMatch(itemBarcode: String?, searchBarcode: String): Boolean {
     if (cleanItem.isEmpty() || cleanSearch.isEmpty()) return false
 
     if (cleanItem == cleanSearch) return true
+
     val strippedItem = cleanItem.trimStart('0')
     val strippedSearch = cleanSearch.trimStart('0')
     if (strippedItem.isNotEmpty() && strippedItem == strippedSearch) return true
 
-    if (strippedItem.length >= 8 && strippedSearch.length >= 8) {
-        if (strippedItem.endsWith(strippedSearch) || strippedSearch.endsWith(strippedItem)) return true
-    }
+    if (cleanItem.length == 12 && cleanSearch.length == 13 && cleanSearch == "0$cleanItem") return true
+    if (cleanSearch.length == 12 && cleanItem.length == 13 && cleanItem == "0$cleanSearch") return true
 
     return false
 }
 
-@ExperimentalGetImage
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
     initialQuery: String = "",
+    initialBarcode: String? = null,
     repository: GameRepository,
     movieRepository: MovieRepository,
     musicRepository: MusicRepository,
@@ -129,21 +211,24 @@ fun SearchScreen(
     onGameSelected: (String) -> Unit,
     onMovieSelected: (String) -> Unit,
     onMusicSelected: (String) -> Unit,
+    onAddGame: (query: String, platformId: String?, barcode: String?) -> Unit = { _, _, _ -> },
+    onAddMovie: (query: String, formatId: String?, barcode: String?) -> Unit = { _, _, _ -> },
+    onAddMusic: (query: String, formatId: String?, barcode: String?) -> Unit = { _, _, _ -> },
     onScanClick: (() -> Unit)? = null,
     onBack: () -> Unit,
 ) {
     var searchQuery by rememberSaveable { mutableStateOf(initialQuery) }
-    var showPhotoScanner by remember { mutableStateOf(false) }
-    
-    BackHandler {
-        if (searchQuery.isNotEmpty()) {
-            searchQuery = ""
-        } else {
-            onBack()
+    var searchBarcode by rememberSaveable { mutableStateOf(initialBarcode) }
+    var selectingMediaType by remember { mutableStateOf<SelectMediaType?>(null) }
+
+    LaunchedEffect(searchQuery) {
+        val clean = searchQuery.trim()
+        if (clean.all { it.isDigit() } && clean.length >= 6) {
+            searchBarcode = clean
         }
     }
     
-    val focusRequester = remember { FocusRequester() }
+
     val currentSortOption by settingsRepository.sortOption.collectAsState(initial = SortOption.NAME)
     val scope = rememberCoroutineScope()
 
@@ -265,99 +350,25 @@ fun SearchScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
-
-    if (showPhotoScanner) {
-        PhotoScanDialog(
-            onTextScanned = { recognizedText ->
-                showPhotoScanner = false
-                searchQuery = recognizedText.trim()
-            },
-            onDismiss = { showPhotoScanner = false }
-        )
-    }
-
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .focusRequester(focusRequester),
-                        placeholder = { Text(stringResource(R.string.msg_search_all_games)) },
-                        leadingIcon = {
-                            Icon(
-                                painter = painterResource(id = R.drawable.search),
-                                contentDescription = "Search",
-                                tint = Color.White.copy(alpha = 0.6f),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        },
-                        trailingIcon = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(end = 4.dp)
-                            ) {
-                                if (searchQuery.isNotEmpty()) {
-                                    IconButton(onClick = { searchQuery = "" }) {
-                                        Icon(
-                                            painter = painterResource(id = R.drawable.ic_close),
-                                            contentDescription = "Clear",
-                                            tint = Color.White.copy(alpha = 0.6f),
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                }
-                                if (onScanClick != null) {
-                                    IconButton(onClick = onScanClick) {
-                                        Icon(
-                                            painter = painterResource(id = R.drawable.camera),
-                                            contentDescription = "Scan Barcode",
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(22.dp)
-                                        )
-                                    }
-                                }
-                                IconButton(onClick = { showPhotoScanner = true }) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.camera),
-                                        contentDescription = "Scan Photo / Cover",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                }
-                            }
-                        },
-                        singleLine = true,
-                        shape = getAppCorners(),
-                        colors = synthwaveTextFieldColors(),
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.White)
+                    NeonHeader(
+                        text = "SEARCH RESULTS",
+                        fullWidth = false
                     )
                 },
                 navigationIcon = {
                     NeonBackButton(onClick = onBack, modifier = Modifier.padding(start = 8.dp))
                 },
                 actions = {
-                    if (searchQuery.isNotEmpty()) {
-                        SortIconButton(
-                            currentSortOption = currentSortOption,
-                            onSortOptionSelected = { scope.launch { settingsRepository.setSortOption(it) } },
-                            showConsoleSort = true
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        NeonIconButton(
-                            iconPainter = painterResource(id = R.drawable.ic_close),
-                            onClick = { searchQuery = "" },
-                            contentDescription = stringResource(R.string.action_clear)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
+                    SortIconButton(
+                        currentSortOption = currentSortOption,
+                        onSortOptionSelected = { scope.launch { settingsRepository.setSortOption(it) } },
+                        showConsoleSort = true
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent
@@ -371,71 +382,69 @@ fun SearchScreen(
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            if (searchQuery.isEmpty()) {
+            if (filteredGames.isEmpty() && filteredMovies.isEmpty() && filteredMusic.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(20.dp),
-                        modifier = Modifier.padding(bottom = 60.dp)
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.padding(24.dp)
                     ) {
-                        Icon(
-                            Icons.Rounded.Search,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                        Text(
+                            text = if (searchQuery.isBlank()) "NO SEARCH QUERY" else "NO LOCAL RESULTS FOR:",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
+                            ),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
                         )
-                        SectionHeader(
-                            text = stringResource(R.string.msg_type_to_search),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        if (onScanClick != null) {
+
+                        if (searchQuery.isNotBlank()) {
+                            val displayTitle = remember(searchQuery) {
+                                val clean = searchQuery.trim()
+                                if (clean.all { it.isDigit() } && clean.length >= 6) {
+                                    clean
+                                } else {
+                                    val translated = translateGermanToEnglish(clean)
+                                    BarcodeLookupService.extractGameNameFromWebTitle(translated)
+                                }
+                            }
+
+                            Text(
+                                text = displayTitle,
+                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                                color = Color.White,
+                                textAlign = TextAlign.Center
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
                             NeonButton(
-                                text = "SCAN BARCODE",
-                                iconPainter = painterResource(id = R.drawable.camera),
-                                onClick = onScanClick,
-                                modifier = Modifier.width(260.dp),
-                                color = MaterialTheme.colorScheme.primary
+                                text = "+ ADD GAME VIA IGDB",
+                                onClick = { selectingMediaType = SelectMediaType.GAME },
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.fillMaxWidth(0.9f)
                             )
-                        }
-                    }
-                }
-            } else if (filteredGames.isEmpty() && filteredMovies.isEmpty() && filteredMusic.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    val accentColor = MaterialTheme.colorScheme.primary
-                    val borderRadius = 12.dp
-                    Surface(
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.4f),
-                        shape = getAppCorners(borderRadius),
-                        border = BorderStroke(0.5.dp, accentColor.copy(alpha = 0.5f)),
-                        modifier = Modifier.padding(bottom = 150.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
-                        ) {
-                            Text(
-                                text = "No Results for:".uppercase(),
-                                style = MaterialTheme.typography.labelLarge.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 2.sp
-                                ),
-                                color = accentColor
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = searchQuery,
-                                style = MaterialTheme.typography.labelLarge.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 2.sp
-                                ),
-                                color = Color.White
-                            )
+
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth(0.9f)
+                            ) {
+                                NeonButton(
+                                    text = "+ MOVIE",
+                                    onClick = { selectingMediaType = SelectMediaType.MOVIE },
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                NeonButton(
+                                    text = "+ MUSIC",
+                                    onClick = { selectingMediaType = SelectMediaType.MUSIC },
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
                     }
                 }
@@ -488,226 +497,153 @@ fun SearchScreen(
             }
         }
     }
+
+    if (selectingMediaType != null) {
+        val currentType = selectingMediaType!!
+        val titleText = when (currentType) {
+            SelectMediaType.GAME -> "SELECT CONSOLE / PLATFORM"
+            SelectMediaType.MOVIE -> "SELECT MOVIE FORMAT"
+            SelectMediaType.MUSIC -> "SELECT MUSIC FORMAT"
+        }
+
+        val availablePlatforms = remember(disabledIds) {
+            StaticData.platforms.filter { !disabledIds.contains(it.id) && !disabledIds.contains(it.manufacturerId) }
+                .ifEmpty { StaticData.platforms }
+        }
+        val availableMovieFormats = remember(disabledIds) {
+            StaticData.movieFormats.filter { !disabledIds.contains(it.id) }
+                .ifEmpty { StaticData.movieFormats }
+        }
+        val availableMusicFormats = remember(disabledIds) {
+            StaticData.musicFormats.filter { !disabledIds.contains(it.id) }
+                .ifEmpty { StaticData.musicFormats }
+        }
+
+        val options = when (currentType) {
+            SelectMediaType.GAME -> availablePlatforms.map { it.name }
+            SelectMediaType.MOVIE -> availableMovieFormats.map { it.name }
+            SelectMediaType.MUSIC -> availableMusicFormats.map { it.name }
+        }
+
+        val accentColor = when (currentType) {
+            SelectMediaType.GAME -> MaterialTheme.colorScheme.primary
+            SelectMediaType.MOVIE -> MaterialTheme.colorScheme.secondary
+            SelectMediaType.MUSIC -> MaterialTheme.colorScheme.secondary
+        }
+
+        SelectFormatDialog(
+            title = titleText,
+            options = options,
+            initialSelected = options.firstOrNull() ?: "",
+            accentColor = accentColor,
+            onConfirm = { selectedName ->
+                selectingMediaType = null
+                val effectiveTitle = if (searchQuery.all { it.isDigit() } && searchQuery.length >= 6) {
+                    searchQuery
+                } else {
+                    val translated = translateGermanToEnglish(searchQuery.trim())
+                    BarcodeLookupService.extractGameNameFromWebTitle(translated)
+                }
+
+                when (currentType) {
+                    SelectMediaType.GAME -> {
+                        val platform = availablePlatforms.find { it.name == selectedName } ?: StaticData.platforms.find { it.name == selectedName }
+                        onAddGame(effectiveTitle, platform?.id, searchBarcode)
+                    }
+                    SelectMediaType.MOVIE -> {
+                        val format = availableMovieFormats.find { it.name == selectedName } ?: StaticData.movieFormats.find { it.name == selectedName }
+                        onAddMovie(effectiveTitle, format?.id, searchBarcode)
+                    }
+                    SelectMediaType.MUSIC -> {
+                        val format = availableMusicFormats.find { it.name == selectedName } ?: StaticData.musicFormats.find { it.name == selectedName }
+                        onAddMusic(effectiveTitle, format?.id, searchBarcode)
+                    }
+                }
+            },
+            onDismiss = { selectingMediaType = null }
+        )
+    }
 }
 
-@OptIn(ExperimentalPermissionsApi::class)
-@ExperimentalGetImage
+enum class SelectMediaType {
+    GAME, MOVIE, MUSIC
+}
+
 @Composable
-fun PhotoScanDialog(
-    onTextScanned: (String) -> Unit,
+fun SelectFormatDialog(
+    title: String,
+    options: List<String>,
+    initialSelected: String,
+    accentColor: Color,
+    onConfirm: (selectedName: String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
+    var selectedOption by remember { mutableStateOf(initialSelected.ifBlank { options.firstOrNull() ?: "" }) }
 
-    LaunchedEffect(Unit) {
-        cameraPermissionState.launchPermissionRequest()
-    }
-
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        val dialogView = LocalView.current
-        SideEffect {
-            val dialogWindow = (dialogView.parent as? DialogWindowProvider)?.window
-            if (dialogWindow != null) {
-                WindowCompat.setDecorFitsSystemWindows(dialogWindow, false)
-                dialogWindow.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT)
-                dialogWindow.setGravity(Gravity.CENTER)
-                ViewCompat.setOnApplyWindowInsetsListener(dialogView) { _, _ -> WindowInsetsCompat.CONSUMED }
-            }
-        }
-
-        Box(
+    Dialog(onDismissRequest = onDismiss) {
+        NeonCard(
+            color = accentColor,
+            containerAlpha = 0.95f,
+            padding = 16.dp,
             modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)
+                .width(320.dp)
+                .wrapContentHeight()
         ) {
-            if (cameraPermissionState.status.isGranted) {
-                var isScanned by remember { mutableStateOf(false) }
-                var detectedText by remember { mutableStateOf("") }
-                
-                val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
-                val previewView = remember { PreviewView(context) }
-                var cameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
-
-                val textRecognizer = remember {
-                    TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-                }
-
-                DisposableEffect(Unit) {
-                    onDispose {
-                        cameraExecutor.shutdown()
-                    }
-                }
-
-                LaunchedEffect(Unit) {
-                    try {
-                        cameraProvider = ProcessCameraProvider.getInstance(context).get()
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-
-                LaunchedEffect(cameraProvider) {
-                    val provider = cameraProvider ?: return@LaunchedEffect
-                    val preview = Preview.Builder().build().also {
-                        it.surfaceProvider = previewView.surfaceProvider
-                    }
-
-                    val imageAnalyzer = ImageAnalysis.Builder()
-                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                        .build()
-                        .also {
-                            it.setAnalyzer(cameraExecutor) { imageProxy ->
-                                val mediaImage = imageProxy.image
-                                if (mediaImage != null && !isScanned) {
-                                    val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-                                    textRecognizer.process(image)
-                                        .addOnSuccessListener { visionText ->
-                                            val txt = visionText.text
-                                            if (txt.isNotBlank()) {
-                                                detectedText = txt
-                                            }
-                                        }
-                                        .addOnCompleteListener { imageProxy.close() }
-                                } else {
-                                    imageProxy.close()
-                                }
-                            }
-                        }
-
-                    try {
-                        provider.unbindAll()
-                        provider.bindToLifecycle(
-                            lifecycleOwner,
-                            CameraSelector.DEFAULT_BACK_CAMERA,
-                            preview,
-                            imageAnalyzer
-                        )
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-
-                AndroidView(
-                    factory = { previewView },
-                    modifier = Modifier.fillMaxSize()
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = title.uppercase(),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
+                    color = accentColor,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
                 )
 
-                // Neon Scan Frame Overlay for Photo/Cover Scan
-                val scanAccentColor = MaterialTheme.colorScheme.primary
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val strokeWidth = 4.dp.toPx()
-                    val cornerLength = 40.dp.toPx()
-                    val rectWidth = 280.dp.toPx()
-                    val rectHeight = 360.dp.toPx()
-                    val left = (size.width - rectWidth) / 2
-                    val top = (size.height - rectHeight) / 2
-                    val right = left + rectWidth
-                    val bottom = top + rectHeight
+                Text(
+                    text = "Please select target console/format:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.85f),
+                    textAlign = TextAlign.Center
+                )
 
-                    // Top Left
-                    drawLine(scanAccentColor, Offset(left, top), Offset(left + cornerLength, top), strokeWidth)
-                    drawLine(scanAccentColor, Offset(left, top), Offset(left, top + cornerLength), strokeWidth)
-                    // Top Right
-                    drawLine(scanAccentColor, Offset(right, top), Offset(right - cornerLength, top), strokeWidth)
-                    drawLine(scanAccentColor, Offset(right, top), Offset(right, top + cornerLength), strokeWidth)
-                    // Bottom Left
-                    drawLine(scanAccentColor, Offset(left, bottom), Offset(left + cornerLength, bottom), strokeWidth)
-                    drawLine(scanAccentColor, Offset(left, bottom), Offset(left, bottom - cornerLength), strokeWidth)
-                    // Bottom Right
-                    drawLine(scanAccentColor, Offset(right, bottom), Offset(right - cornerLength, bottom), strokeWidth)
-                    drawLine(scanAccentColor, Offset(right, bottom), Offset(right, bottom - cornerLength), strokeWidth)
-                }
+                FormDropdownField(
+                    label = "Console / Format",
+                    selectedValue = selectedOption,
+                    options = options,
+                    onOptionSelected = { selectedOption = it },
+                    placeholder = "Select...",
+                    accentColor = accentColor
+                )
 
-                // Top bar
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    NeonBackButton(onClick = onDismiss)
-                    Text(
-                        "SCAN PHOTO / COVER",
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    NeonButton(
+                        text = "CANCEL",
+                        onClick = onDismiss,
+                        color = Color.White.copy(alpha = 0.85f),
+                        containerColor = Color.White.copy(alpha = 0.08f),
+                        modifier = Modifier.weight(1f),
+                        height = 42.dp
                     )
-                    Spacer(modifier = Modifier.width(48.dp))
-                }
 
-                // Bottom scan action button
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .navigationBarsPadding()
-                        .padding(bottom = 32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    if (detectedText.isNotBlank()) {
-                        val firstLine = detectedText.split("\n").firstOrNull { it.isNotBlank() } ?: ""
-                        val displayStr = if (firstLine.length > 25) firstLine.take(25) + "..." else firstLine
-                        
-                        Text(
-                            text = "Reading: $displayStr",
-                            color = MaterialTheme.colorScheme.primary,
-                            style = MaterialTheme.typography.labelMedium,
-                            modifier = Modifier
-                                .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
-
-                        Button(
-                            onClick = {
-                                if (!isScanned) {
-                                    isScanned = true
-                                    onTextScanned(firstLine)
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                            modifier = Modifier
-                                .height(52.dp)
-                                .width(200.dp)
-                        ) {
-                            Text(
-                                "SCAN PHOTO",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                            )
-                        }
-                    } else {
-                        Text(
-                            text = "KEEP COVER / PHOTO IN FRAME",
-                            color = Color.White.copy(alpha = 0.8f),
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
-                            ),
-                            modifier = Modifier
-                                .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
-                    }
-                }
-            } else {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Camera Permission Required", color = Color.White)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { cameraPermissionState.launchPermissionRequest() }) {
-                            Text("Grant Permission")
-                        }
-                    }
+                    NeonButton(
+                        text = "CONTINUE",
+                        onClick = {
+                            if (selectedOption.isNotBlank()) {
+                                onConfirm(selectedOption)
+                            }
+                        },
+                        color = accentColor,
+                        modifier = Modifier.weight(1f),
+                        height = 42.dp
+                    )
                 }
             }
         }
     }
 }
+

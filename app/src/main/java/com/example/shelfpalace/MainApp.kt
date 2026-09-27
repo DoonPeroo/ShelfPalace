@@ -416,6 +416,9 @@ fun MainApp(
                         onMusicRecognized = { musicId ->
                             navController.navigate(Destinations.MusicDetail(musicId))
                         },
+                        onSearchTitle = { query, barcode ->
+                            navController.navigate(Destinations.Search(initialQuery = query, initialBarcode = barcode))
+                        },
                         onBack = { navController.popBackStack() }
                     )
                 }
@@ -423,6 +426,7 @@ fun MainApp(
                     val route: Destinations.Search = backStackEntry.toRoute()
                     SearchScreen(
                         initialQuery = route.initialQuery,
+                        initialBarcode = route.initialBarcode,
                         repository = repository,
                         movieRepository = movieRepository,
                         musicRepository = musicRepository,
@@ -435,6 +439,42 @@ fun MainApp(
                         },
                         onMusicSelected = { musicId ->
                             navController.navigate(Destinations.MusicDetail(musicId))
+                        },
+                        onAddGame = { query, platformId, barcode ->
+                            val isDigits = query.all { it.isDigit() } && query.length >= 6
+                            val finalBarcode = barcode ?: if (isDigits) query else null
+                            val finalTitle = if (query == finalBarcode) null else query
+                            navController.navigate(
+                                Destinations.AddEditGame(
+                                    platformId = platformId,
+                                    prefilledTitle = finalTitle,
+                                    prefilledBarcode = finalBarcode
+                                )
+                            )
+                        },
+                        onAddMovie = { query, formatId, barcode ->
+                            val isDigits = query.all { it.isDigit() } && query.length >= 6
+                            val finalBarcode = barcode ?: if (isDigits) query else null
+                            val finalTitle = if (query == finalBarcode) null else query
+                            navController.navigate(
+                                Destinations.AddEditMovie(
+                                    formatId = formatId,
+                                    prefilledTitle = finalTitle,
+                                    prefilledBarcode = finalBarcode
+                                )
+                            )
+                        },
+                        onAddMusic = { query, formatId, barcode ->
+                            val isDigits = query.all { it.isDigit() } && query.length >= 6
+                            val finalBarcode = barcode ?: if (isDigits) query else null
+                            val finalTitle = if (query == finalBarcode) null else query
+                            navController.navigate(
+                                Destinations.AddEditMusic(
+                                    formatId = formatId,
+                                    prefilledTitle = finalTitle,
+                                    prefilledBarcode = finalBarcode
+                                )
+                            )
                         },
                         onScanClick = {
                             navController.navigate(Destinations.Scanner)
@@ -464,19 +504,24 @@ fun MainApp(
                         platformId = route.platformId,
                         gameId = route.gameId,
                         igdbId = route.igdbId,
+                        prefilledTitle = route.prefilledTitle,
+                        prefilledBarcode = route.prefilledBarcode,
                         repository = repository,
+                        settingsRepository = settingsRepository,
                         onSave = { savedGameId ->
                             navController.popBackStack<Destinations.AddEditGame>(inclusive = true)
                             if (!isEditMode) {
                                 navController.navigate(Destinations.GameDetail(savedGameId))
                             }
                         },
-                        onIgdbSearch = { currentTitle ->
+                        onIgdbSearch = { currentTitle, selectedPlatformId ->
+                            val activePlatformId = selectedPlatformId.ifBlank { route.platformId }
                             navController.navigate(
                                 Destinations.IgdbSearch(
-                                    platformId = route.platformId, 
+                                    platformId = activePlatformId, 
                                     gameId = route.gameId, 
-                                    initialQuery = currentTitle
+                                    initialQuery = currentTitle,
+                                    prefilledBarcode = route.prefilledBarcode
                                 )
                             )
                         },
@@ -495,7 +540,8 @@ fun MainApp(
                                 Destinations.AddEditGame(
                                     platformId = route.platformId, 
                                     gameId = route.gameId, 
-                                    igdbId = igdbId
+                                    igdbId = igdbId,
+                                    prefilledBarcode = route.prefilledBarcode
                                 )
                             ) {
                                 popUpTo<Destinations.AddEditGame> { inclusive = true }
@@ -592,21 +638,26 @@ fun MainApp(
                         movieId = route.movieId,
                         tmdbId = route.tmdbId,
                         language = route.language,
+                        prefilledTitle = route.prefilledTitle,
+                        prefilledBarcode = route.prefilledBarcode,
                         repository = movieRepository,
+                        settingsRepository = settingsRepository,
                         onSave = { savedMovieId ->
                             navController.popBackStack<Destinations.AddEditMovie>(inclusive = true)
                             if (!isEditMode) {
                                 navController.navigate(Destinations.MovieDetail(savedMovieId))
                             }
                         },
-                        onTmdbSearch = { currentTitle, currentYear, currentLanguage ->
+                        onTmdbSearch = { currentTitle, selectedFormatId, currentYear, currentLanguage ->
+                            val activeFormatId = selectedFormatId.ifBlank { route.formatId }
                             navController.navigate(
                                 Destinations.TmdbSearch(
-                                    formatId = route.formatId,
+                                    formatId = activeFormatId,
                                     movieId = route.movieId,
                                     initialQuery = currentTitle,
                                     initialYear = currentYear,
-                                    initialLanguage = currentLanguage
+                                    initialLanguage = currentLanguage,
+                                    prefilledBarcode = route.prefilledBarcode
                                 )
                             )
                         },
@@ -630,7 +681,8 @@ fun MainApp(
                                     formatId = route.formatId,
                                     movieId = route.movieId,
                                     tmdbId = selectedTmdbId,
-                                    language = selectedLanguage
+                                    language = selectedLanguage,
+                                    prefilledBarcode = route.prefilledBarcode
                                 )
                             ) {
                                 popUpTo<Destinations.AddEditMovie> { inclusive = true }
@@ -707,7 +759,10 @@ fun MainApp(
                         formatId = route.formatId,
                         musicId = route.musicId,
                         discogsId = route.discogsId,
+                        prefilledTitle = route.prefilledTitle,
+                        prefilledBarcode = route.prefilledBarcode,
                         repository = musicRepository,
+                        settingsRepository = settingsRepository,
                         onSave = { savedMusicId ->
                             navController.popBackStack<Destinations.AddEditMusic>(inclusive = true)
                             if (!isEditMode) {
@@ -722,7 +777,8 @@ fun MainApp(
                                     initialQuery = currentTitle,
                                     initialFormat = currentFormat,
                                     initialLabel = currentLabel,
-                                    initialYear = currentYear
+                                    initialYear = currentYear,
+                                    prefilledBarcode = route.prefilledBarcode
                                 )
                             )
                         },
@@ -748,7 +804,8 @@ fun MainApp(
                                 Destinations.AddEditMusic(
                                     formatId = route.formatId,
                                     musicId = route.musicId,
-                                    discogsId = discogsId
+                                    discogsId = discogsId,
+                                    prefilledBarcode = route.prefilledBarcode
                                 )
                             ) {
                                 popUpTo<Destinations.AddEditMusic> { inclusive = true }

@@ -7,6 +7,7 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.util.Locale
 
 object BarcodeLookupService {
 
@@ -93,24 +94,23 @@ object BarcodeLookupService {
         } ?: candidatesList.first()
 
         val finalCleanedTitle = extractGameNameFromWebTitle(bestRawTitle)
+        val translatedTitle = extractGameNameFromWebTitle(translateGermanToEnglish(finalCleanedTitle))
 
         // 11. Query IGDB with extracted title to return official IGDB main name if matching
         try {
-            val igdbResults = IgdbService.search(finalCleanedTitle)
+            val igdbResults = IgdbService.search(translatedTitle)
             val igdbGame = igdbResults.firstOrNull()
             if (igdbGame != null && !igdbGame.name.isNullOrBlank()) {
-                if (isTitleMatch(igdbGame.name, finalCleanedTitle) || isTitleMatch(finalCleanedTitle, igdbGame.name)) {
-                    val cleanIgdbName = extractGameNameFromWebTitle(igdbGame.name)
-                    if (cleanIgdbName.isNotBlank()) {
-                        return@withContext cleanIgdbName
-                    }
+                val cleanIgdbName = extractGameNameFromWebTitle(igdbGame.name)
+                if (cleanIgdbName.isNotBlank()) {
+                    return@withContext cleanIgdbName
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "IGDB lookup failed for $finalCleanedTitle", e)
+            Log.e(TAG, "IGDB lookup failed for $translatedTitle", e)
         }
 
-        return@withContext finalCleanedTitle
+        return@withContext translatedTitle
     }
 
     private fun isValidMediaProductTitle(title: String): Boolean {
@@ -133,6 +133,10 @@ object BarcodeLookupService {
     }
 
     private val GERMAN_TO_ENGLISH_MAP = mapOf(
+        "schachmaster" to "chessmaster",
+        "schach" to "chess",
+        "großmeister" to "grandmaster",
+        "grossmeister" to "grandmaster",
         "der herr der ringe" to "the lord of the rings",
         "herr der ringe" to "lord of the rings",
         "die eroberung" to "the lord of the rings: conquest",
@@ -181,8 +185,38 @@ object BarcodeLookupService {
         "yogi bär" to "yogi bear",
         "yogi baer" to "yogi bear",
         "spongebob schwammkopf" to "spongebob squarepants",
-        "winnie puuh" to "winnie the pooh"
+        "winnie puuh" to "winnie the pooh",
+        "das geheimnis" to "the secret",
+        "geheimnis" to "secret",
+        "die rückkehr" to "the return",
+        "die rueckkehr" to "the return",
+        "rückkehr" to "return",
+        "die rache" to "the revenge",
+        "rache" to "revenge",
+        "die legende" to "the legend",
+        "legende" to "legend",
+        "das schicksal" to "the fate",
+        "schicksal" to "fate",
+        "der fluch" to "the curse",
+        "fluch" to "curse",
+        "der krieg" to "the war",
+        "krieg" to "war",
+        "die schlacht" to "the battle",
+        "schlacht" to "battle"
     )
+
+    private fun toTitleCase(input: String): String {
+        if (input.isBlank()) return ""
+        val lowercaseWords = setOf("a", "an", "the", "and", "or", "of", "for", "in", "on", "at", "to", "with")
+        return input.split(" ").joinToString(" ") { word ->
+            if (word.isBlank()) ""
+            else {
+                val lower = word.lowercase()
+                if (lowercaseWords.contains(lower) && input.indexOf(word) > 0) lower
+                else lower.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.US) else it.toString() }
+            }
+        }
+    }
 
     private fun translateGermanToEnglish(raw: String): String {
         var title = raw.lowercase()
@@ -192,7 +226,7 @@ object BarcodeLookupService {
                 title = title.replace(regex, english)
             }
         }
-        return title
+        return toTitleCase(title)
     }
 
     private fun isTitleMatch(title1: String, title2: String): Boolean {

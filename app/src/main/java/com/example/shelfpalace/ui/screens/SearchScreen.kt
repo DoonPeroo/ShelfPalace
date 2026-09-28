@@ -47,6 +47,7 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.util.Locale
 import java.util.concurrent.Executors
 
 internal val TITLE_STOPWORDS = setOf(
@@ -59,6 +60,10 @@ internal val TITLE_STOPWORDS = setOf(
 )
 
 private val GERMAN_TO_ENGLISH_MAP = mapOf(
+    "schachmaster" to "chessmaster",
+    "schach" to "chess",
+    "großmeister" to "grandmaster",
+    "grossmeister" to "grandmaster",
     "der herr der ringe" to "the lord of the rings",
     "herr der ringe" to "lord of the rings",
     "die eroberung" to "the lord of the rings: conquest",
@@ -108,11 +113,41 @@ private val GERMAN_TO_ENGLISH_MAP = mapOf(
     "yogi baer" to "yogi bear",
     "spongebob schwammkopf" to "spongebob squarepants",
     "winnie puuh" to "winnie the pooh",
+    "das geheimnis" to "the secret",
+    "geheimnis" to "secret",
+    "die rückkehr" to "the return",
+    "die rueckkehr" to "the return",
+    "rückkehr" to "return",
+    "die rache" to "the revenge",
+    "rache" to "revenge",
+    "die legende" to "the legend",
+    "legende" to "legend",
+    "das schicksal" to "the fate",
+    "schicksal" to "fate",
+    "der fluch" to "the curse",
+    "fluch" to "curse",
+    "der krieg" to "the war",
+    "krieg" to "war",
+    "die schlacht" to "the battle",
+    "schlacht" to "battle",
     "das videospiel" to "",
     "das spiel zum film" to "",
     "meine tierarztpraxis" to "pet vet",
     "meine fohlenwelt" to "my horse park",
 )
+
+fun toTitleCase(input: String): String {
+    if (input.isBlank()) return ""
+    val lowercaseWords = setOf("a", "an", "the", "and", "or", "of", "for", "in", "on", "at", "to", "with")
+    return input.split(" ").joinToString(" ") { word ->
+        if (word.isBlank()) ""
+        else {
+            val lower = word.lowercase()
+            if (lowercaseWords.contains(lower) && input.indexOf(word) > 0) lower
+            else lower.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.US) else it.toString() }
+        }
+    }
+}
 
 fun translateGermanToEnglish(raw: String): String {
     var title = raw.lowercase()
@@ -122,7 +157,7 @@ fun translateGermanToEnglish(raw: String): String {
             title = title.replace(regex, english)
         }
     }
-    return title
+    return toTitleCase(title)
 }
 
 fun isTitleMatch(localTitle: String, resolvedTitle: String): Boolean {

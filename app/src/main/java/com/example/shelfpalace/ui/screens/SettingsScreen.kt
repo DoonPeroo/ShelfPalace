@@ -63,6 +63,15 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    val appVersionName = remember(context) {
+        try {
+            val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            "ver. " + (pInfo.versionName ?: "1.02")
+        } catch (e: Exception) {
+            "ver. 1.02"
+        }
+    }
     val disabledIds by repository.disabledIds.collectAsState(initial = emptySet())
     val cornerStyle by repository.cornerStyle.collectAsState(initial = CornerStyle.OUTLINED)
     val appTheme by repository.appTheme.collectAsState(initial = AppTheme.SYNTHWAVE)
@@ -571,7 +580,7 @@ fun SettingsScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "ver. BETA 0.90",
+                        text = appVersionName,
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.sp

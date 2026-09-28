@@ -7,7 +7,7 @@ Keep your physical media collection organized in one place, track favorites and 
 
 The app combines a retro-inspired **Synthwave interface** with a visual, cover-focused library.
 
-> **Current version:** Beta 0.90
+> **Current version:** 1.02
 
 ---
 
@@ -215,7 +215,7 @@ ShelfPalace is currently in **Beta**.
 
 Current screenshots show:
 
-**Version Beta 0.90**
+**Version 1.02**
 
 Features, layouts and data structures may still change during development.
 
